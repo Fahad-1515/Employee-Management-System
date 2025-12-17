@@ -4,11 +4,15 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist/ems-frontend"
+        "distDir": "dist/ems-frontend",
+        "buildCommand": "npm run build"
       }
     }
   ],
   "routes": [
+    {
+      "handle": "filesystem"
+    },
     {
       "src": "/(.*)",
       "dest": "/"
@@ -19,5 +23,8 @@
       "source": "/api/:path*",
       "destination": "https://employee-management-system-jxdj.onrender.com/api/:path*"
     }
-  ]
+  ],
+  "env": {
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  }
 }
