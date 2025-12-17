@@ -1,27 +1,22 @@
-
-FROM eclipse-temurin:17-jdk-alpine AS builder
+# Use Java 17 image
+FROM eclipse-temurin:17-jdk-alpine
 
 WORKDIR /app
 
+# Copy Maven wrapper and project files
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
-
-RUN ./mvnw dependency:go-offline -B
-
 COPY src src
 
+# Make mvnw executable
+RUN chmod +x mvnw
+
+# Build the app
 RUN ./mvnw clean package -DskipTests
 
-FROM eclipse-temurin:17-jre-alpine
-
-WORKDIR /app
-
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
-
-COPY --from=builder /app/target/*.jar app.jar
-
+# Expose port
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the jar
+CMD ["java", "-jar", "target/ems-backend-1.0.0.jar"]
