@@ -1,0 +1,4 @@
+CREATE DATABASE ems_db;
+CREATE USER 'emsuser'@'%' IDENTIFIED BY 'emspass';
+GRANT ALL PRIVILEGES ON ems_db.* TO 'emsuser'@'%';
+FLUSH PRIVILEGES;

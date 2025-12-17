@@ -1,0 +1,104 @@
+<div class="app-container">
+  <!-- Header -->
+  <mat-toolbar color="primary" class="main-header" *ngIf="currentUser">
+    <button mat-icon-button (click)="toggleSidebar()" class="menu-btn">
+      <mat-icon>menu</mat-icon>
+    </button>
+
+    <span class="app-title">{{ title }}</span>
+
+    <span class="spacer"></span>
+
+    <!-- User Menu -->
+    <div class="user-info">
+      <span class="user-name">{{ currentUser.username }}</span>
+      <!-- ✅ Removed ? -->
+      <span class="user-role">{{ userRole }}</span>
+    </div>
+
+    <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-btn">
+      <div class="user-avatar">{{ userInitials }}</div>
+    </button>
+
+    <mat-menu #userMenu="matMenu">
+      <div class="user-menu-header">
+        <div class="user-avatar-large">{{ userInitials }}</div>
+        <div class="user-details">
+          <strong>{{ currentUser.username }}</strong>
+          <!-- ✅ Removed ? -->
+          <span>{{ userRole }}</span>
+        </div>
+      </div>
+      <mat-divider></mat-divider>
+      <button mat-menu-item routerLink="/profile">
+        <mat-icon>account_circle</mat-icon>
+        <span>Profile</span>
+      </button>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Logout</span>
+      </button>
+    </mat-menu>
+  </mat-toolbar>
+
+  <!-- Main Content -->
+  <div class="main-content" *ngIf="currentUser">
+    <!-- Sidebar -->
+    <mat-sidenav-container class="sidenav-container">
+      <mat-sidenav #sidenav mode="side" [opened]="isSidebarOpen" class="sidebar">
+        <mat-nav-list>
+          <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
+            <mat-icon>dashboard</mat-icon>
+            <span>Dashboard</span>
+          </a>
+          <a mat-list-item routerLink="/employees" routerLinkActive="active">
+            <mat-icon>people</mat-icon>
+            <span>Employees</span>
+            <mat-icon class="menu-badge" *ngIf="authService.isAdmin()">star</mat-icon>
+            <!-- ✅ Now public -->
+          </a>
+          <a
+            mat-list-item
+            routerLink="/add-employee"
+            routerLinkActive="active"
+            *ngIf="authService.isAdmin()"
+          >
+            <!-- ✅ Now public -->
+            <mat-icon>person_add</mat-icon>
+            <span>Add Employee</span>
+          </a>
+          <a
+            mat-list-item
+            routerLink="/departments"
+            routerLinkActive="active"
+            *ngIf="authService.isAdmin()"
+          >
+            <!-- ✅ Now public -->
+            <mat-icon>business</mat-icon>
+            <span>Departments</span>
+          </a>
+          <a
+            mat-list-item
+            routerLink="/reports"
+            routerLinkActive="active"
+            *ngIf="authService.isManager()"
+          >
+            <!-- ✅ Now public -->
+            <mat-icon>assessment</mat-icon>
+            <span>Reports</span>
+          </a>
+        </mat-nav-list>
+      </mat-sidenav>
+
+      <!-- Page Content -->
+      <mat-sidenav-content class="content-area">
+        <router-outlet></router-outlet>
+      </mat-sidenav-content>
+    </mat-sidenav-container>
+  </div>
+
+  <!-- Login Page (when not authenticated) -->
+  <div class="auth-content" *ngIf="!currentUser">
+    <router-outlet></router-outlet>
+  </div>
+</div>

@@ -1,0 +1,186 @@
+<div class="employee-form-container">
+  <h2 mat-dialog-title>
+    <mat-icon>{{ isEdit ? "edit" : "person_add" }}</mat-icon>
+    {{ title }}
+  </h2>
+
+  <mat-dialog-content>
+    <form [formGroup]="employeeForm" class="employee-form">
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>First Name</mat-label>
+          <input
+            matInput
+            formControlName="firstName"
+            placeholder="Enter first name"
+          />
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="firstName?.hasError('required')">
+            First name is required
+          </mat-error>
+          <mat-error *ngIf="firstName?.hasError('minlength')">
+            First name must be at least 2 characters
+          </mat-error>
+          <mat-error *ngIf="firstName?.hasError('maxlength')">
+            First name cannot exceed 50 characters
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Last Name</mat-label>
+          <input
+            matInput
+            formControlName="lastName"
+            placeholder="Enter last name"
+          />
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="lastName?.hasError('required')">
+            Last name is required
+          </mat-error>
+          <mat-error *ngIf="lastName?.hasError('minlength')">
+            Last name must be at least 2 characters
+          </mat-error>
+          <mat-error *ngIf="lastName?.hasError('maxlength')">
+            Last name cannot exceed 50 characters
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            formControlName="email"
+            placeholder="Enter email address"
+            type="email"
+          />
+          <mat-icon matSuffix>email</mat-icon>
+          <mat-error *ngIf="email?.hasError('required')">
+            Email is required
+          </mat-error>
+          <mat-error *ngIf="email?.hasError('email')">
+            Please enter a valid email address
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Phone Number with Country Code -->
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="country-code-field">
+          <mat-label>Country Code</mat-label>
+          <mat-select formControlName="countryCode">
+            <mat-option
+              *ngFor="let country of countryCodes"
+              [value]="country.code"
+            >
+              {{ country.flag }} {{ country.code }} ({{ country.name }})
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>language</mat-icon>
+          <mat-error *ngIf="countryCode?.hasError('required')">
+            Country code is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="phone-field">
+          <mat-label>Phone Number</mat-label>
+          <input
+            matInput
+            formControlName="phoneNumber"
+            placeholder="Enter phone number"
+          />
+          <mat-icon matSuffix>phone</mat-icon>
+          <mat-hint *ngIf="!hidePhoneHint">
+            Full number: {{ getFullPhoneNumber() }}
+          </mat-hint>
+          <mat-error *ngIf="phoneNumber?.hasError('required')">
+            Phone number is required
+          </mat-error>
+          <mat-error *ngIf="phoneNumber?.hasError('pattern')">
+            Please enter 8-15 digits without country code
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Department</mat-label>
+          <mat-select formControlName="department">
+            <mat-option value="">Select Department</mat-option>
+            <mat-option *ngFor="let dept of departments" [value]="dept">
+              {{ dept }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>business</mat-icon>
+          <mat-error *ngIf="department?.hasError('required')">
+            Department is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="form-field">
+          <mat-label>Position</mat-label>
+          <mat-select formControlName="position">
+            <mat-option value="">Select Position</mat-option>
+            <mat-option *ngFor="let position of positions" [value]="position">
+              {{ position }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>work</mat-icon>
+          <mat-error *ngIf="position?.hasError('required')">
+            Position is required
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="form-field full-width">
+          <mat-label>Salary</mat-label>
+          <input
+            matInput
+            formControlName="salary"
+            placeholder="Enter salary"
+            type="number"
+          />
+          <mat-icon matSuffix>attach_money</mat-icon>
+          <mat-error *ngIf="salary?.hasError('required')">
+            Salary is required
+          </mat-error>
+          <mat-error *ngIf="salary?.hasError('min')">
+            Salary must be positive
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Preview Section -->
+      <div class="preview-section" *ngIf="getFullPhoneNumber()">
+        <mat-card class="preview-card">
+          <mat-card-header>
+            <mat-card-title>Preview</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="preview-info">
+              <strong>Full Phone Number:</strong> {{ getFullPhoneNumber() }}
+            </div>
+            <div class="preview-info">
+              <strong>Selected Country:</strong> {{ getSelectedCountryName() }}
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="onSubmit()"
+      [disabled]="!employeeForm.valid || loading"
+    >
+      <mat-icon>{{ isEdit ? "save" : "add" }}</mat-icon>
+      {{ loading ? "PLEASE WAIT..." : buttonText }}
+    </button>
+  </mat-dialog-actions>
+</div>

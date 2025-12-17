@@ -1,0 +1,235 @@
+<!-- src/app/components/dashboard/dashboard.component.html -->
+<div class="dashboard-container">
+  <!-- Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-info">
+        <h1 class="greeting">{{ getGreeting() }}, {{ user?.username }}! 👋</h1>
+        <p class="subtitle">Here's what's happening with your team today</p>
+      </div>
+      <div class="header-actions">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="navigateToEmployees()"
+        >
+          <mat-icon>people</mat-icon>
+          Manage Team
+        </button>
+        <button
+          mat-icon-button
+          [matMenuTriggerFor]="userMenu"
+          class="user-menu-btn"
+        >
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item>
+            <mat-icon>person</mat-icon>
+            Profile
+          </button>
+          <button mat-menu-item>
+            <mat-icon>settings</mat-icon>
+            Settings
+          </button>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            Logout
+          </button>
+        </mat-menu>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading dashboard data...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div *ngIf="!loading" class="dashboard-content">
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon total-employees">
+            <mat-icon>groups</mat-icon>
+          </div>
+          <div class="metric-info">
+            <h3>{{ stats.totalEmployees }}</h3>
+            <p>Total Employees</p>
+            <span class="metric-trend positive"
+              >+{{ stats.recentHires }} new</span
+            >
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon departments">
+            <mat-icon>business</mat-icon>
+          </div>
+          <div class="metric-info">
+            <h3>{{ stats.totalDepartments }}</h3>
+            <p>Departments</p>
+            <span class="metric-trend">Active</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon salary">
+            <mat-icon>attach_money</mat-icon>
+          </div>
+          <div class="metric-info">
+            <h3>${{ stats.avgSalary | number : "1.0-0" }}</h3>
+            <p>Avg Salary</p>
+            <span class="metric-trend">Monthly</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="metric-card">
+        <mat-card-content>
+          <div class="metric-icon projects">
+            <mat-icon>assignment</mat-icon>
+          </div>
+          <div class="metric-info">
+            <h3>{{ stats.activeProjects }}</h3>
+            <p>Active Projects</p>
+            <span class="metric-trend">Ongoing</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+      <!-- Quick Actions -->
+      <mat-card class="actions-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>flash_on</mat-icon>
+            Quick Actions
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="actions-grid">
+            <button
+              *ngFor="let action of quickActions"
+              mat-raised-button
+              [color]="action.color"
+              class="action-btn"
+              (click)="performQuickAction(action.action)"
+            >
+              <mat-icon>{{ action.icon }}</mat-icon>
+              <div class="action-content">
+                <strong>{{ action.title }}</strong>
+                <span>{{ action.description }}</span>
+              </div>
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Recent Activity -->
+      <mat-card class="activity-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>schedule</mat-icon>
+            Recent Activity
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="activity-list">
+            <div
+              *ngFor="let activity of recentActivities"
+              class="activity-item"
+            >
+              <div class="activity-icon">
+                <mat-icon>{{ activity.icon }}</mat-icon>
+              </div>
+              <div class="activity-details">
+                <strong>{{ activity.action }}</strong>
+                <span>by {{ activity.user }}</span>
+              </div>
+              <div class="activity-time">{{ activity.time }}</div>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Main Actions -->
+      <mat-card class="main-actions-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>dashboard</mat-icon>
+            Main Features
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="main-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              class="main-action-btn"
+              (click)="navigateToEmployees()"
+            >
+              <mat-icon>people</mat-icon>
+              <div class="main-action-content">
+                <strong>Employee Management</strong>
+                <span>View, add, edit employees</span>
+              </div>
+            </button>
+
+            <button
+              mat-raised-button
+              color="accent"
+              class="main-action-btn"
+              (click)="navigateToAnalytics()"
+            >
+              <mat-icon>analytics</mat-icon>
+              <div class="main-action-content">
+                <strong>Analytics & Reports</strong>
+                <span>View detailed insights</span>
+              </div>
+            </button>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- System Status -->
+      <mat-card class="status-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>check_circle</mat-icon>
+            System Status
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="status-list">
+            <div class="status-item online">
+              <mat-icon>cloud_done</mat-icon>
+              <span>Backend API</span>
+              <mat-icon class="status-indicator">circle</mat-icon>
+            </div>
+            <div class="status-item online">
+              <mat-icon>storage</mat-icon>
+              <span>Database</span>
+              <mat-icon class="status-indicator">circle</mat-icon>
+            </div>
+            <div class="status-item online">
+              <mat-icon>security</mat-icon>
+              <span>Authentication</span>
+              <mat-icon class="status-indicator">circle</mat-icon>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

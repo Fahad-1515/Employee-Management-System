@@ -1,0 +1,93 @@
+/* Import Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Material Design theme */
+@import "@angular/material/prebuilt-themes/indigo-pink.css";
+
+/* Global reset - LESS aggressive */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Fix for Material inputs with Tailwind */
+.mat-form-field {
+  display: block !important;
+  width: 100%;
+}
+
+/* Prevent Tailwind from interfering with Material */
+.mat-form-field-wrapper {
+  padding-bottom: 0;
+}
+
+.mat-input-element {
+  background-color: transparent !important;
+}
+
+/* Fix dialog positioning */
+.cdk-overlay-pane {
+  position: relative !important;
+}
+
+.mat-dialog-container {
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Utility classes */
+.spacer {
+  flex: 1 1 auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Custom animations */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 10px;
+  }
+}
