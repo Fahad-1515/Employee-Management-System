@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/employees")
-//@CrossOrigin(origins = {
+@CrossOrigin(origins = {
      "http://localhost:4200",
     "https://employee-management-system-ruddy-nine.vercel.app",
     "https://employee-management-system-jxdj.onrender.com"
