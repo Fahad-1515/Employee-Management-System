@@ -20,9 +20,9 @@ public class EmsBackendApplication {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
                     .allowedOrigins(
-                        "http://localhost:4200",  // Local Angular
-                        "https://employee-management-system-snowy-three.vercel.app",  // Your Vercel URL
-                        "https://*.vercel.app"  // All Vercel previews
+                        "http://localhost:4200",  
+                        "https://employee-management-system-ruddy-nine.vercel.app/"
+                        
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")
