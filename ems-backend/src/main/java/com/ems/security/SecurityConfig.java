@@ -78,9 +78,10 @@ public class SecurityConfig {
         // Allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
-            "http://127.0.0.1:4200",
-             "https://employee-management-system-rose-mu.vercel.app",
-            "https://*.vercel.app"
+    "http://127.0.0.1:4200",
+    "https://employee-management-system-snowy-three.vercel.app",  
+    "https://employee-management-system-rose-mu.vercel.app",     
+    "https://*.vercel.app"    
             
     ));
         
