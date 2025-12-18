@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/test")
-@CrossOrigin(origins = {
+//@CrossOrigin(origins = {
      "http://localhost:4200",
     "https://employee-management-system-ruddy-nine.vercel.app",
     "https://employee-management-system-jxdj.onrender.com"
