@@ -19,7 +19,9 @@ public class EmsBackendApplication {
                 registry.addMapping("/api/**")
                     .allowedOrigins(
                         "http://localhost:4200",  
-                        "https://employee-management-system-ruddy-nine.vercel.app/"
+                        "https://employee-management-system-ruddy-nine.vercel.app"http://localhost:4200",  
+    "https://employee-management-system-ruddy-nine.vercel.app",
+    "https://*.vercel.app"
                         
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
