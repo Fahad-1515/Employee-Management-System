@@ -88,7 +88,7 @@ public class AuthController {
     // === MAIN LOGIN ENDPOINT ===
     
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) { 
         System.out.println("\n" + "=".repeat(50));
         System.out.println("=== LOGIN ATTEMPT ===");
         System.out.println("Username: " + loginRequest.getUsername());
