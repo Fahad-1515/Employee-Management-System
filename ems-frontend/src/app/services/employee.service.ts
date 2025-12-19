@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, tap, map } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import {
   Employee,
   EmployeeResponse,
@@ -29,56 +29,55 @@ export class EmployeeService {
   ];
 
   constructor(private http: HttpClient) {
-    console.log(' EmployeeService initialized');
-    console.log(' API Base URL:', this.apiUrl);
+    console.log('🔧 EmployeeService initialized');
+    console.log('🌐 API Base URL:', this.apiUrl);
   }
 
   getDepartments(): Observable<string[]> {
-    console.log(' Fetching departments from:', `${this.apiUrl}/departments`);
+    console.log('🔄 Fetching departments from:', `${this.apiUrl}/departments`);
     
     return this.http.get<string[]>(`${this.apiUrl}/departments`).pipe(
       tap(data => {
-        console.log(' Departments API success:', data);
+        console.log('✅ Departments API success:', data);
         if (!data || data.length === 0) {
-          console.warn('  API returned empty departments, using fallback');
+          console.warn('⚠️  API returned empty departments, using fallback');
         }
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error(' Departments API error:', {
+        console.error('❌ Departments API error:', {
           status: error.status,
           message: error.message,
           url: error.url
         });
-        console.log(' Using fallback departments:', this.fallbackDepartments);
-        return of(this.fallbackDepartments); // Return fallback data
+        console.log('📋 Using fallback departments:', this.fallbackDepartments);
+        return of(this.fallbackDepartments);
       })
     );
   }
 
-  // ========== FIXED POSITION METHOD ==========
   getPositions(): Observable<string[]> {
-    console.log('Fetching positions from:', `${this.apiUrl}/positions`);
+    console.log('🔄 Fetching positions from:', `${this.apiUrl}/positions`);
     
     return this.http.get<string[]>(`${this.apiUrl}/positions`).pipe(
       tap(data => {
-        console.log(' Positions API success:', data);
+        console.log('✅ Positions API success:', data);
         if (!data || data.length === 0) {
-          console.warn('  API returned empty positions, using fallback');
+          console.warn('⚠️  API returned empty positions, using fallback');
         }
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error(' Positions API error:', {
+        console.error('❌ Positions API error:', {
           status: error.status,
           message: error.message,
           url: error.url
         });
         console.log('📋 Using fallback positions:', this.fallbackPositions);
-        return of(this.fallbackPositions); // Return fallback data
+        return of(this.fallbackPositions);
       })
     );
   }
 
-  // ========== FIXED SEARCH METHOD (TypeScript error fixed) ==========
+  // ========== FIXED: searchEmployees() method ==========
   searchEmployees(
     page: number = 0,
     size: number = 10,
@@ -104,32 +103,32 @@ export class EmployeeService {
       params = params.set('maxSalary', criteria.maxSalary.toString());
     }
 
-    console.log(' Fetching employees with params:', params.toString());
+    console.log('🔄 Fetching employees with params:', params.toString());
 
     return this.http.get<EmployeeResponse>(this.apiUrl, { params }).pipe(
       tap(response => {
         console.log(' Employees API response:', {
           hasContent: response.content?.length > 0,
-          totalElements: response.totalItems, // Using totalItems from interface
+          totalElements: response.totalElements, 
           totalPages: response.totalPages
         });
       }),
       catchError((error: HttpErrorResponse) => {
-        console.error(' Search employees error:', {
+        console.error('❌ Search employees error:', {
           status: error.status,
           message: error.message,
           url: error.url
         });
         
-        // Return empty response that matches EmployeeResponse interface EXACTLY
+       
         const errorResponse: EmployeeResponse = {
           content: [],
-          currentPage: 0,
-          totalItems: 0,
+          number: 0,              
+          size: size,            
+          totalElements: 0,       
           totalPages: 0,
-          pageSize: size,
-          hasNext: false,
-          hasPrevious: false
+          hasNext: false,        
+          hasPrevious: false     
         };
         return of(errorResponse);
       })
@@ -175,13 +174,12 @@ export class EmployeeService {
     );
   }
 
-  // Other methods remain the same...
   exportToCSV(): Observable<Blob> {
     return this.http.get(`${this.exportApiUrl}/employees/csv`, {
       responseType: 'blob',
     }).pipe(
       catchError(error => {
-        console.error(' Export CSV error:', error);
+        console.error('❌ Export CSV error:', error);
         return throwError(() => new Error('Failed to export CSV'));
       })
     );
@@ -192,7 +190,7 @@ export class EmployeeService {
       responseType: 'blob',
     }).pipe(
       catchError(error => {
-        console.error(' Export Excel error:', error);
+        console.error('❌ Export Excel error:', error);
         return throwError(() => new Error('Failed to export Excel'));
       })
     );
@@ -201,7 +199,7 @@ export class EmployeeService {
   getDashboardStats(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/stats/summary`).pipe(
       catchError(error => {
-        console.error(' Dashboard stats error:', error);
+        console.error('❌ Dashboard stats error:', error);
         return of({ totalEmployees: 0, totalDepartments: 0 });
       })
     );
@@ -210,7 +208,7 @@ export class EmployeeService {
   getEmployeeStatistics(): Observable<any> {
     return this.http.get<any>(`${this.apiUrl}/stats/summary`).pipe(
       catchError(error => {
-        console.error(' Employee statistics error:', error);
+        console.error('❌ Employee statistics error:', error);
         return of({ totalEmployees: 0, totalDepartments: 0 });
       })
     );
@@ -219,8 +217,8 @@ export class EmployeeService {
   emailExists(email: string): Observable<boolean> {
     return this.http.get<boolean>(`${this.apiUrl}/check-email?email=${email}`).pipe(
       catchError(error => {
-        console.error(' Email check error:', error);
-        return of(false); // Return false on error
+        console.error('❌ Email check error:', error);
+        return of(false);
       })
     );
   }
@@ -228,8 +226,8 @@ export class EmployeeService {
   getDepartmentCount(): Observable<number> {
     return this.http.get<number>(`${this.apiUrl}/departments/count`).pipe(
       catchError(error => {
-        console.error(' Department count error:', error);
-        return of(0); // Return 0 on error
+        console.error('❌ Department count error:', error);
+        return of(0);
       })
     );
   }
