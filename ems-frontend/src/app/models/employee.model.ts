@@ -4,11 +4,11 @@ export interface Employee {
   lastName: string;
   email: string;
   phoneNumber: string;
-  countryCode: string; // Added country code
+  countryCode: string; 
   department: string;
   position: string;
   salary: number;
-  hireDate?: string; // Added hire date
+  hireDate?: string; 
   createdAt?: string;
   updatedAt?: string;
 }
@@ -19,6 +19,9 @@ export interface EmployeeResponse {
   totalPages: number;
   size: number;
   number: number;
+
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface EmployeeSearchCriteria {
@@ -29,7 +32,6 @@ export interface EmployeeSearchCriteria {
   searchTerm?: string;
 }
 
-// Country codes constant for dropdown
 export const COUNTRY_CODES = [
   { code: '+1', name: 'USA/Canada', flag: '🇺🇸' },
   { code: '+44', name: 'UK', flag: '🇬🇧' },
@@ -96,7 +98,6 @@ export function extractCountryCode(phoneNumber: string): {
   if (!phoneNumber) return { countryCode: '+1', number: '' };
 
   if (phoneNumber.startsWith('+')) {
-    // Common country code patterns
     const patterns = [
       { code: '+1', length: 12 }, // USA/Canada
       { code: '+44', length: 13 }, // UK
@@ -135,7 +136,6 @@ export function extractCountryCode(phoneNumber: string): {
   return { countryCode: '+1', number: phoneNumber };
 }
 
-// Interface for country code selection
 export interface CountryCode {
   code: string;
   name: string;
