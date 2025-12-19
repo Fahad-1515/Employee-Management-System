@@ -8,7 +8,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
+import java.util.Arrays; 
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
@@ -74,13 +74,33 @@ public class EmployeeService {
     }
 
     public List<String> getDistinctDepartments() {
-        return employeeRepository.findDistinctDepartments();
+    List<String> departments = employeeRepository.findDistinctDepartments();
+    
+    // If no departments exist yet (first employee), return common defaults
+    if (departments.isEmpty()) {
+        return Arrays.asList(
+            "IT", "HR", "Finance", "Marketing", 
+            "Sales", "Operations", "Support", "Administration"
+        );
     }
-
+    
+    return departments;
+}
     public List<String> getDistinctPositions() {
-        return employeeRepository.findDistinctPositions();
+    List<String> positions = employeeRepository.findDistinctPositions();
+    
+    // If no positions exist yet (first employee), return common defaults
+    if (positions.isEmpty()) {
+        return Arrays.asList(
+            "Software Engineer", "HR Manager", "Financial Analyst",
+            "Marketing Specialist", "Sales Representative", "Operations Manager",
+            "System Administrator", "Frontend Developer", "Backend Developer",
+            "Data Analyst", "Product Manager", "Quality Assurance"
+        );
     }
-
+    
+    return positions;
+}
     public Page<Employee> getEmployeesByDepartment(String department, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("firstName").ascending());
         return employeeRepository.findByDepartment(department, pageable);
