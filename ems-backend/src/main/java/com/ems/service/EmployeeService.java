@@ -54,6 +54,7 @@ public class EmployeeService {
             throw new RuntimeException("Email already exists: " + employee.getEmail());
         }
         
+        // For updates, check if email exists for other employees
         if (employee.getId() != null) {
             Employee existing = getEmployeeById(employee.getId());
             if (!existing.getEmail().equals(employee.getEmail()) && 
@@ -72,61 +73,35 @@ public class EmployeeService {
         employeeRepository.deleteById(id);
     }
 
-  public List<String> getDistinctDepartments() {
-    System.out.println("\n=== GETTING DISTINCT DEPARTMENTS ===");
+    public List<String> getDistinctDepartments() {
+    List<String> departments = employeeRepository.findDistinctDepartments();
     
-    try {
-        List<String> departments = employeeRepository.findDistinctDepartments();
-        System.out.println("Database returned: " + departments);
-        
-        if (departments == null || departments.isEmpty()) {
-            System.out.println("No departments in DB, returning defaults");
-            return Arrays.asList(
-                "IT", "HR", "Finance", "Marketing", 
-                "Sales", "Operations", "Support", "Administration",
-                "Engineering", "Customer Service", "Research & Development"
-            );
-        }
-        
-        System.out.println("Returning departments from DB: " + departments);
-        return departments;
-        
-    } catch (Exception e) {
-        System.out.println("❌ Error getting departments: " + e.getMessage());
-        e.printStackTrace();
-        return Arrays.asList("IT", "HR", "Finance", "Marketing", "Sales", "Operations");
+    // If no departments exist yet (first employee), return common defaults
+    if (departments.isEmpty()) {
+        return Arrays.asList(
+            "IT", "HR", "Finance", "Marketing", 
+            "Sales", "Operations", "Support", "Administration"
+        );
     }
+    
+    return departments;
 }
-   public List<String> getDistinctPositions() {
-    System.out.println("\n=== GETTING DISTINCT POSITIONS ===");
+    public List<String> getDistinctPositions() {
+    List<String> positions = employeeRepository.findDistinctPositions();
     
-    try {
-        List<String> positions = employeeRepository.findDistinctPositions();
-        System.out.println("Database returned: " + positions);
-        
-        // CRITICAL FIX: Check for null first!
-        if (positions == null || positions.isEmpty()) {
-            System.out.println("No positions in DB, returning defaults");
-            return Arrays.asList(
-                "Software Engineer", "HR Manager", "Financial Analyst",
-                "Marketing Specialist", "Sales Representative", "Operations Manager",
-                "System Administrator", "Frontend Developer", "Backend Developer",
-                "Data Analyst", "Product Manager", "Quality Assurance",
-                "Project Manager", "UI/UX Designer", "Database Administrator"
-            );
-        }
-        
-        System.out.println("Returning positions from DB: " + positions);
-        return positions;
-        
-    } catch (Exception e) {
-        System.out.println("❌ Error getting positions: " + e.getMessage());
-        e.printStackTrace();
-        
-        // Return defaults on error too
-        return Arrays.asList("Software Engineer", "HR Manager", "Financial Analyst", "Marketing Specialist");
+    // If no positions exist yet (first employee), return common defaults
+    if (positions.isEmpty()) {
+        return Arrays.asList(
+            "Software Engineer", "HR Manager", "Financial Analyst",
+            "Marketing Specialist", "Sales Representative", "Operations Manager",
+            "System Administrator", "Frontend Developer", "Backend Developer",
+            "Data Analyst", "Product Manager", "Quality Assurance"
+        );
     }
-}    public Page<Employee> getEmployeesByDepartment(String department, int page, int size) {
+    
+    return positions;
+}
+    public Page<Employee> getEmployeesByDepartment(String department, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("firstName").ascending());
         return employeeRepository.findByDepartment(department, pageable);
     }
