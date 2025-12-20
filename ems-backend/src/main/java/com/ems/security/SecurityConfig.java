@@ -79,7 +79,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
         "http://127.0.0.1:4200",
-        "https://employee-management-system-mu-seven.vercel.app",
+        "https://employee-management-system-nqloq2uaj-fahad-1515s-projects.vercel.app",
         "https://*.vercel.app" 
             
     ));
