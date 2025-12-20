@@ -41,21 +41,36 @@ export class EmployeeFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Load fallback data immediately so dropdowns aren't empty
-    this.departments = this.getFallbackDepartments();
-    this.positions = this.getFallbackPositions();
+    console.log('🎯 EmployeeFormComponent.ngOnInit() called');
+    
+    // Start with empty arrays (they'll be filled by loadFilters)
+    this.departments = [];
+    this.positions = [];
+    
+    console.log('Initial empty arrays set');
+    console.log('Departments length:', this.departments.length);
+    console.log('Positions length:', this.positions.length);
 
     this.loadFormData();
-    this.loadFilters(); // This will replace with API data if available
+    
+    console.log('🔄 Calling loadFilters()...');
+    this.loadFilters(); // This will fill the arrays from API or fallbacks
 
-    // Watch for changes to update phone hint
-    this.employeeForm.get('countryCode')?.valueChanges.subscribe(() => {
-      this.updatePhoneHint();
-    });
-
-    this.employeeForm.get('phoneNumber')?.valueChanges.subscribe(() => {
-      this.updatePhoneHint();
-    });
+    setTimeout(() => {
+      console.log('⏱️ After 1 second check:');
+      console.log('Departments:', this.departments);
+      console.log('Positions:', this.positions);
+      
+      if (this.departments.length === 0) {
+        console.warn('⚠️ Departments still empty, forcing fallback!');
+        this.departments = this.getFallbackDepartments();
+      }
+      
+      if (this.positions.length === 0) {
+        console.warn('⚠️ Positions still empty, forcing fallback!');
+        this.positions = this.getFallbackPositions();
+      }
+    }, 1000);
   }
 
   createForm(): FormGroup {
@@ -95,7 +110,6 @@ export class EmployeeFormComponent implements OnInit {
       let countryCode = '+1';
       let phoneNumber = this.data.phoneNumber || '';
 
-      // Extract country code from phone number
       if (phoneNumber && phoneNumber.startsWith('+')) {
         // Find matching country code
         const country = this.countryCodes.find((code) =>
@@ -127,29 +141,55 @@ export class EmployeeFormComponent implements OnInit {
   }
 
   loadFilters(): void {
+    console.log('🔍 loadFilters() called');
+    
     // Load departments
     this.employeeService.getDepartments().subscribe({
       next: (departments) => {
+        console.log('✅ Departments API response:', departments);
+        
         if (departments && departments.length > 0) {
           this.departments = departments;
+          console.log('📋 Departments updated from API:', this.departments);
+        } else {
+          // API returned empty array, use fallback
+          this.departments = this.getFallbackDepartments();
+          console.log('⚠️ API returned empty, using fallback departments:', this.departments);
         }
       },
       error: (error) => {
-        console.warn('Using fallback departments:', error);
-        // Already set fallback in ngOnInit
+        console.error('❌ Error fetching departments:', error);
+        console.error('Error status:', error.status);
+        console.error('Error message:', error.message);
+        
+        // CRITICAL: Update with fallback on error
+        this.departments = this.getFallbackDepartments();
+        console.log('🔄 Using fallback departments due to error:', this.departments);
       },
     });
 
     // Load positions
     this.employeeService.getPositions().subscribe({
       next: (positions) => {
+        console.log('✅ Positions API response:', positions);
+        
         if (positions && positions.length > 0) {
           this.positions = positions;
+          console.log('📋 Positions updated from API:', this.positions);
+        } else {
+          // API returned empty array, use fallback
+          this.positions = this.getFallbackPositions();
+          console.log('⚠️ API returned empty, using fallback positions:', this.positions);
         }
       },
       error: (error) => {
-        console.warn('Using fallback positions:', error);
-        // Already set fallback in ngOnInit
+        console.error('❌ Error fetching positions:', error);
+        console.error('Error status:', error.status);
+        console.error('Error message:', error.message);
+        
+        // CRITICAL: Update with fallback on error
+        this.positions = this.getFallbackPositions();
+        console.log('🔄 Using fallback positions due to error:', this.positions);
       },
     });
   }
