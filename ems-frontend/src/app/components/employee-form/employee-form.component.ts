@@ -23,6 +23,9 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   hidePhoneHint = false;
   employeeId?: number;
   
+  // Track loading state properly
+  private departmentsLoaded = false;
+  private positionsLoaded = false;
   private subscriptions: Subscription[] = [];
 
   // Form field getters
@@ -61,6 +64,8 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
     // Initialize with fallback data immediately
     this.departments = this.getFallbackDepartments();
     this.positions = this.getFallbackPositions();
+    console.log('📊 Initial departments:', this.departments);
+    console.log('📊 Initial positions:', this.positions);
     
     if (this.isEdit && data?.id) {
       this.employeeId = data.id;
@@ -161,54 +166,133 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   }
 
   loadFilters(): void {
+    console.log('🔄 Starting loadFilters()');
+    console.log('Current departments:', this.departments.length);
+    console.log('Current positions:', this.positions.length);
+    
     this.loadingData = true;
     
-    // Load departments
+    // Load departments with detailed logging
+    console.log('📡 Calling employeeService.getDepartments()');
     const deptSub = this.employeeService.getDepartments().subscribe({
       next: (departments) => {
-        if (departments && departments.length > 0) {
+        console.log('📦 Departments API SUCCESS!');
+        console.log('Received data:', departments);
+        console.log('Is Array?', Array.isArray(departments));
+        console.log('Length:', departments?.length);
+        console.log('First item:', departments?.[0]);
+        console.log('Full array:', departments);
+        
+        if (departments && Array.isArray(departments) && departments.length > 0) {
           this.departments = departments;
-          console.log('✅ Departments loaded:', this.departments.length);
+          console.log(`✅ Loaded ${departments.length} departments from API`);
+        } else {
+          console.warn('⚠️ API returned empty/not array, keeping fallback');
+          console.log('Current departments remain:', this.departments);
         }
+        this.departmentsLoaded = true;
         this.checkDataLoaded();
       },
       error: (error) => {
-        console.error('❌ Failed to load departments:', error);
-        // Keep fallback departments
+        console.error('💥 Departments API ERROR:');
+        console.error('Error object:', error);
+        console.error('Status:', error?.status);
+        console.error('Message:', error?.message);
+        console.error('URL:', error?.url);
+        
+        console.log('Keeping fallback departments:', this.departments);
+        this.departmentsLoaded = true;
         this.checkDataLoaded();
       }
     });
     
-    // Load positions
+    // Load positions with detailed logging
+    console.log('📡 Calling employeeService.getPositions()');
     const posSub = this.employeeService.getPositions().subscribe({
       next: (positions) => {
-        if (positions && positions.length > 0) {
+        console.log('📦 Positions API SUCCESS!');
+        console.log('Received data:', positions);
+        console.log('Is Array?', Array.isArray(positions));
+        console.log('Length:', positions?.length);
+        console.log('First item:', positions?.[0]);
+        
+        if (positions && Array.isArray(positions) && positions.length > 0) {
           this.positions = positions;
-          console.log('✅ Positions loaded:', this.positions.length);
+          console.log(`✅ Loaded ${positions.length} positions from API`);
+        } else {
+          console.warn('⚠️ API returned empty positions, keeping fallback');
+          console.log('Current positions remain:', this.positions);
         }
+        this.positionsLoaded = true;
         this.checkDataLoaded();
       },
       error: (error) => {
-        console.error('❌ Failed to load positions:', error);
-        // Keep fallback positions
+        console.error('💥 Positions API ERROR:');
+        console.error('Error object:', error);
+        console.error('Status:', error?.status);
+        console.error('Message:', error?.message);
+        
+        console.log('Keeping fallback positions:', this.positions);
+        this.positionsLoaded = true;
         this.checkDataLoaded();
       }
     });
     
     this.subscriptions.push(deptSub, posSub);
+    
+    // Set timeout to show loading state
+    setTimeout(() => {
+      if (!this.departmentsLoaded || !this.positionsLoaded) {
+        console.log('⏳ Still loading after 2 seconds...');
+        console.log('Departments loaded?', this.departmentsLoaded);
+        console.log('Positions loaded?', this.positionsLoaded);
+      }
+    }, 2000);
   }
 
   private checkDataLoaded(): void {
-    // This is called by both department and position loaders
-    // In a real app, you'd track each separately
-    setTimeout(() => {
+    console.log('🔄 checkDataLoaded() called');
+    console.log('Departments loaded?', this.departmentsLoaded);
+    console.log('Positions loaded?', this.positionsLoaded);
+    console.log('Departments count:', this.departments.length);
+    console.log('Positions count:', this.positions.length);
+    console.log('Departments:', this.departments);
+    console.log('Positions:', this.positions);
+    
+    if (this.departmentsLoaded && this.positionsLoaded) {
+      console.log('✅✅✅ BOTH DEPARTMENTS AND POSITIONS LOADED! ✅✅✅');
+      console.log('Final departments:', this.departments);
+      console.log('Final positions:', this.positions);
+      
       this.loadingData = false;
+      
+      // Force UI update
       this.cdRef.detectChanges();
-    }, 300);
+      
+      // Additional check after UI update
+      setTimeout(() => {
+        console.log('🔄 Final check - Form values:');
+        console.log('Department control value:', this.department?.value);
+        console.log('Position control value:', this.position?.value);
+        console.log('Department control valid?', this.department?.valid);
+        console.log('Position control valid?', this.position?.valid);
+      }, 100);
+    } else {
+      console.log('⏳ Waiting for other data...');
+      console.log('Need departments:', !this.departmentsLoaded);
+      console.log('Need positions:', !this.positionsLoaded);
+    }
   }
 
   onSubmit(): void {
     if (this.employeeForm.invalid) {
+      console.log('❌ Form invalid!');
+      console.log('Form errors:', this.employeeForm.errors);
+      console.log('Department errors:', this.department?.errors);
+      console.log('Position errors:', this.position?.errors);
+      console.log('Department value:', this.department?.value);
+      console.log('Position value:', this.position?.value);
+      
       this.markAllFieldsAsTouched();
       this.showErrorMessage('Please fill all required fields correctly');
       return;
@@ -321,22 +405,61 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
     this.showErrorMessage(errorMessage);
   }
 
-  // Fallback Data
+  // Fallback Data - Match DataInitializer from backend
   private getFallbackDepartments(): string[] {
     return [
-      'IT', 'HR', 'Finance', 'Marketing',
-      'Sales', 'Operations', 'R&D', 'Support',
-      'Engineering', 'Customer Service', 'Administration'
+      'IT', 'HR', 'Finance', 'Marketing', 
+      'Sales', 'Operations', 'Design', 'Support'
     ];
   }
 
   private getFallbackPositions(): string[] {
     return [
       'Software Engineer', 'HR Manager', 'Financial Analyst',
-      'Marketing Specialist', 'Sales Manager', 'Operations Manager',
-      'System Administrator', 'Frontend Developer', 'Backend Developer',
-      'UI/UX Designer', 'Data Analyst', 'Project Manager',
-      'Quality Assurance', 'Product Manager', 'DevOps Engineer'
+      'Marketing Specialist', 'Sales Manager', 'System Administrator',
+      'Operations Manager', 'Frontend Developer', 'Backend Developer',
+      'UI/UX Designer', 'Accountant', 'Recruiter', 'Sales Executive'
     ];
+  }
+  
+  // Test method to check backend directly
+  testBackendConnection(): void {
+    console.log('🧪 Testing backend connection directly...');
+    
+    // Test departments endpoint
+    fetch('https://employee-management-system-jxdj.onrender.com/api/employees/departments')
+      .then(response => {
+        console.log('📡 Departments Response:');
+        console.log('  Status:', response.status);
+        console.log('  OK:', response.ok);
+        console.log('  Headers:', response.headers);
+        return response.json();
+      })
+      .then(data => {
+        console.log('🎉 Departments Data:', data);
+        console.log('  Type:', typeof data);
+        console.log('  Length:', data?.length);
+        console.log('  Full:', JSON.stringify(data));
+      })
+      .catch(error => {
+        console.error('💥 Departments Fetch Error:', error);
+      });
+    
+    // Test positions endpoint
+    fetch('https://employee-management-system-jxdj.onrender.com/api/employees/positions')
+      .then(response => {
+        console.log('📡 Positions Response:');
+        console.log('  Status:', response.status);
+        console.log('  OK:', response.ok);
+        return response.json();
+      })
+      .then(data => {
+        console.log('🎉 Positions Data:', data);
+        console.log('  Type:', typeof data);
+        console.log('  Length:', data?.length);
+      })
+      .catch(error => {
+        console.error('💥 Positions Fetch Error:', error);
+      });
   }
 }
