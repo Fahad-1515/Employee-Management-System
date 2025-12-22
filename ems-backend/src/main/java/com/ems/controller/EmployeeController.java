@@ -14,7 +14,7 @@ import java.util.*;
 @RequestMapping("/api/employees")
 @CrossOrigin(origins = {
     "http://localhost:4200",
-    "https://employee-management-system-xi-henna.vercel.app",
+    "https://employee-management-system-red-eta.vercel.app",
     "https://employee-management-system-jxdj.onrender.com"
 })
 public class EmployeeController {
