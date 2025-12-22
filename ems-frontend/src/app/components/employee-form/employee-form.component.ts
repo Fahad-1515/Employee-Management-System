@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, ChangeDetectorRef } from '@angular/core'; // ADD ChangeDetectorRef
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,6 +19,7 @@ export class EmployeeFormComponent implements OnInit {
   employeeForm: FormGroup;
   isEdit = false;
   loading = false;
+  loadingData = true; // ADDED: Loading state for departments/positions
   departments: string[] = [];
   positions: string[] = [];
   countryCodes = COUNTRY_CODES;
@@ -29,11 +30,21 @@ export class EmployeeFormComponent implements OnInit {
     private fb: FormBuilder,
     private employeeService: EmployeeService,
     private snackBar: MatSnackBar,
+    private cdRef: ChangeDetectorRef, // ADDED: For change detection
     public dialogRef: MatDialogRef<EmployeeFormComponent>,
     @Inject(MAT_DIALOG_DATA) public data: Employee
   ) {
     this.isEdit = !!data;
     this.employeeForm = this.createForm();
+
+    // ====== CRITICAL FIX: Initialize arrays immediately ======
+    this.departments = this.getFallbackDepartments();
+    this.positions = this.getFallbackPositions();
+    // ========================================================
+
+    console.log('✅ Arrays initialized immediately in constructor');
+    console.log('Departments:', this.departments);
+    console.log('Positions:', this.positions);
 
     if (this.isEdit && data.id) {
       this.employeeId = data.id;
@@ -43,34 +54,18 @@ export class EmployeeFormComponent implements OnInit {
   ngOnInit(): void {
     console.log('🎯 EmployeeFormComponent.ngOnInit() called');
     
-    // Start with empty arrays (they'll be filled by loadFilters)
-    this.departments = [];
-    this.positions = [];
-    
-    console.log('Initial empty arrays set');
-    console.log('Departments length:', this.departments.length);
-    console.log('Positions length:', this.positions.length);
+    console.log('Current arrays:', {
+      departments: this.departments.length,
+      positions: this.positions.length
+    });
 
     this.loadFormData();
     
     console.log('🔄 Calling loadFilters()...');
-    this.loadFilters(); // This will fill the arrays from API or fallbacks
+    this.loadFilters(); // This will update arrays with API data if available
 
-    setTimeout(() => {
-      console.log('⏱️ After 1 second check:');
-      console.log('Departments:', this.departments);
-      console.log('Positions:', this.positions);
-      
-      if (this.departments.length === 0) {
-        console.warn('⚠️ Departments still empty, forcing fallback!');
-        this.departments = this.getFallbackDepartments();
-      }
-      
-      if (this.positions.length === 0) {
-        console.warn('⚠️ Positions still empty, forcing fallback!');
-        this.positions = this.getFallbackPositions();
-      }
-    }, 1000);
+    // REMOVE the setTimeout hack completely
+    // It's causing timing issues
   }
 
   createForm(): FormGroup {
@@ -142,7 +137,19 @@ export class EmployeeFormComponent implements OnInit {
 
   loadFilters(): void {
     console.log('🔍 loadFilters() called');
+    this.loadingData = true; // Start loading
     
+    let departmentsLoaded = false;
+    let positionsLoaded = false;
+
+    const checkAllLoaded = () => {
+      if (departmentsLoaded && positionsLoaded) {
+        this.loadingData = false;
+        this.cdRef.detectChanges(); // Force UI update
+        console.log('✅ All filters loaded');
+      }
+    };
+
     // Load departments
     this.employeeService.getDepartments().subscribe({
       next: (departments) => {
@@ -152,19 +159,21 @@ export class EmployeeFormComponent implements OnInit {
           this.departments = departments;
           console.log('📋 Departments updated from API:', this.departments);
         } else {
-          // API returned empty array, use fallback
-          this.departments = this.getFallbackDepartments();
-          console.log('⚠️ API returned empty, using fallback departments:', this.departments);
+          // Keep fallback values
+          console.log('⚠️ API returned empty, keeping fallback departments');
         }
+        departmentsLoaded = true;
+        checkAllLoaded();
       },
       error: (error) => {
         console.error('❌ Error fetching departments:', error);
         console.error('Error status:', error.status);
         console.error('Error message:', error.message);
         
-        // CRITICAL: Update with fallback on error
-        this.departments = this.getFallbackDepartments();
-        console.log('🔄 Using fallback departments due to error:', this.departments);
+        // Keep fallback values (already set in constructor)
+        console.log('🔄 Using fallback departments due to error');
+        departmentsLoaded = true;
+        checkAllLoaded();
       },
     });
 
@@ -177,19 +186,21 @@ export class EmployeeFormComponent implements OnInit {
           this.positions = positions;
           console.log('📋 Positions updated from API:', this.positions);
         } else {
-          // API returned empty array, use fallback
-          this.positions = this.getFallbackPositions();
-          console.log('⚠️ API returned empty, using fallback positions:', this.positions);
+          // Keep fallback values
+          console.log('⚠️ API returned empty, keeping fallback positions');
         }
+        positionsLoaded = true;
+        checkAllLoaded();
       },
       error: (error) => {
         console.error('❌ Error fetching positions:', error);
         console.error('Error status:', error.status);
         console.error('Error message:', error.message);
         
-        // CRITICAL: Update with fallback on error
-        this.positions = this.getFallbackPositions();
-        console.log('🔄 Using fallback positions due to error:', this.positions);
+        // Keep fallback values (already set in constructor)
+        console.log('🔄 Using fallback positions due to error');
+        positionsLoaded = true;
+        checkAllLoaded();
       },
     });
   }
