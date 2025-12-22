@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { environment } from '../environments/environment'; 
 import {
   Employee,
   EmployeeResponse,
@@ -12,8 +13,9 @@ import {
   providedIn: 'root',
 })
 export class EmployeeService {
-  private apiUrl = '/api/employees';  
-  private exportApiUrl = '/api/export';
+  // UPDATED: Use environment configuration
+  private apiUrl = `${environment.apiUrl}/employees`;
+  private exportApiUrl = `${environment.apiUrl}/export`;
 
   // FALLBACK DATA for when API fails
   private fallbackDepartments = [
@@ -30,13 +32,19 @@ export class EmployeeService {
 
   constructor(private http: HttpClient) {
     console.log('🔧 EmployeeService initialized');
+    console.log('🌐 Environment:', environment.production ? 'PRODUCTION' : 'DEVELOPMENT');
     console.log('🌐 API Base URL:', this.apiUrl);
+    console.log('🌐 Full URLs:');
+    console.log('  - Departments:', `${environment.apiUrl}/employees/departments`);
+    console.log('  - Positions:', `${environment.apiUrl}/employees/positions`);
   }
 
   getDepartments(): Observable<string[]> {
-    console.log('🔄 Fetching departments from:', `${this.apiUrl}/departments`);
+    // UPDATED: Use environment.apiUrl directly
+    const url = `${environment.apiUrl}/employees/departments`;
+    console.log('🔄 Fetching departments from:', url);
     
-    return this.http.get<string[]>(`${this.apiUrl}/departments`).pipe(
+    return this.http.get<string[]>(url).pipe(
       tap(data => {
         console.log('✅ Departments API success:', data);
         if (!data || data.length === 0) {
@@ -47,7 +55,8 @@ export class EmployeeService {
         console.error('❌ Departments API error:', {
           status: error.status,
           message: error.message,
-          url: error.url
+          url: error.url,
+          error: error.error
         });
         console.log('📋 Using fallback departments:', this.fallbackDepartments);
         return of(this.fallbackDepartments);
@@ -56,9 +65,11 @@ export class EmployeeService {
   }
 
   getPositions(): Observable<string[]> {
-    console.log('🔄 Fetching positions from:', `${this.apiUrl}/positions`);
+    // UPDATED: Use environment.apiUrl directly
+    const url = `${environment.apiUrl}/employees/positions`;
+    console.log('🔄 Fetching positions from:', url);
     
-    return this.http.get<string[]>(`${this.apiUrl}/positions`).pipe(
+    return this.http.get<string[]>(url).pipe(
       tap(data => {
         console.log('✅ Positions API success:', data);
         if (!data || data.length === 0) {
@@ -69,7 +80,8 @@ export class EmployeeService {
         console.error('❌ Positions API error:', {
           status: error.status,
           message: error.message,
-          url: error.url
+          url: error.url,
+          error: error.error
         });
         console.log('📋 Using fallback positions:', this.fallbackPositions);
         return of(this.fallbackPositions);
@@ -77,7 +89,6 @@ export class EmployeeService {
     );
   }
 
-  // ========== FIXED: searchEmployees() method ==========
   searchEmployees(
     page: number = 0,
     size: number = 10,
@@ -103,24 +114,26 @@ export class EmployeeService {
       params = params.set('maxSalary', criteria.maxSalary.toString());
     }
 
-    console.log('🔄 Fetching employees with params:', params.toString());
+    console.log('🔄 Fetching employees from:', this.apiUrl);
+    console.log('📋 Params:', params.toString());
 
     return this.http.get<EmployeeResponse>(this.apiUrl, { params }).pipe(
       tap(response => {
-        console.log(' Employees API response:', {
+        console.log('✅ Employees API response:', {
           hasContent: response.content?.length > 0,
           totalElements: response.totalElements, 
-          totalPages: response.totalPages
+          totalPages: response.totalPages,
+          contentLength: response.content?.length
         });
       }),
       catchError((error: HttpErrorResponse) => {
         console.error('❌ Search employees error:', {
           status: error.status,
           message: error.message,
-          url: error.url
+          url: error.url,
+          error: error.error
         });
         
-       
         const errorResponse: EmployeeResponse = {
           content: [],
           number: 0,              
@@ -136,98 +149,216 @@ export class EmployeeService {
   }
 
   getEmployeeById(id: number): Observable<Employee> {
-    return this.http.get<Employee>(`${this.apiUrl}/${id}`).pipe(
+    const url = `${this.apiUrl}/${id}`;
+    console.log('🔄 Fetching employee:', url);
+    
+    return this.http.get<Employee>(url).pipe(
       catchError(error => {
-        console.error(` Get employee ${id} error:`, error);
+        console.error(`❌ Get employee ${id} error:`, {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Employee not found'));
       })
     );
   }
 
   createEmployee(employee: Employee): Observable<Employee> {
+    console.log('🔄 Creating employee at:', this.apiUrl);
+    console.log('📋 Employee data:', employee);
+    
     return this.http.post<Employee>(this.apiUrl, employee).pipe(
-      tap(response => console.log(' Employee created:', response)),
+      tap(response => {
+        console.log('✅ Employee created:', response);
+        console.log('📝 Response details:', {
+          id: response.id,
+          name: `${response.firstName} ${response.lastName}`,
+          email: response.email,
+          department: response.department,
+          position: response.position
+        });
+      }),
       catchError(error => {
-        console.error(' Create employee error:', error);
+        console.error('❌ Create employee error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Failed to create employee'));
       })
     );
   }
 
   updateEmployee(id: number, employee: Employee): Observable<Employee> {
-    return this.http.put<Employee>(`${this.apiUrl}/${id}`, employee).pipe(
-      tap(response => console.log(' Employee updated:', response)),
+    const url = `${this.apiUrl}/${id}`;
+    console.log('🔄 Updating employee at:', url);
+    console.log('📋 Employee data:', employee);
+    
+    return this.http.put<Employee>(url, employee).pipe(
+      tap(response => {
+        console.log('✅ Employee updated:', response);
+        console.log('📝 Response details:', {
+          id: response.id,
+          name: `${response.firstName} ${response.lastName}`,
+          department: response.department,
+          position: response.position
+        });
+      }),
       catchError(error => {
-        console.error(` Update employee ${id} error:`, error);
+        console.error(`❌ Update employee ${id} error:`, {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Failed to update employee'));
       })
     );
   }
 
   deleteEmployee(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
-      tap(() => console.log(` Employee ${id} deleted`)),
+    const url = `${this.apiUrl}/${id}`;
+    console.log('🔄 Deleting employee:', url);
+    
+    return this.http.delete<void>(url).pipe(
+      tap(() => console.log(`✅ Employee ${id} deleted`)),
       catchError(error => {
-        console.error(` Delete employee ${id} error:`, error);
+        console.error(`❌ Delete employee ${id} error:`, {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Failed to delete employee'));
       })
     );
   }
 
   exportToCSV(): Observable<Blob> {
-    return this.http.get(`${this.exportApiUrl}/employees/csv`, {
+    const url = `${this.exportApiUrl}/employees/csv`;
+    console.log('🔄 Exporting to CSV from:', url);
+    
+    return this.http.get(url, {
       responseType: 'blob',
     }).pipe(
+      tap(() => console.log('✅ CSV export successful')),
       catchError(error => {
-        console.error('❌ Export CSV error:', error);
+        console.error('❌ Export CSV error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Failed to export CSV'));
       })
     );
   }
 
   exportToExcel(): Observable<Blob> {
-    return this.http.get(`${this.exportApiUrl}/employees/excel`, {
+    const url = `${this.exportApiUrl}/employees/excel`;
+    console.log('🔄 Exporting to Excel from:', url);
+    
+    return this.http.get(url, {
       responseType: 'blob',
     }).pipe(
+      tap(() => console.log('✅ Excel export successful')),
       catchError(error => {
-        console.error('❌ Export Excel error:', error);
+        console.error('❌ Export Excel error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return throwError(() => new Error('Failed to export Excel'));
       })
     );
   }
 
   getDashboardStats(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/stats/summary`).pipe(
+    const url = `${this.apiUrl}/stats/summary`;
+    console.log('🔄 Fetching dashboard stats from:', url);
+    
+    return this.http.get<any>(url).pipe(
+      tap(stats => console.log('✅ Dashboard stats:', stats)),
       catchError(error => {
-        console.error('❌ Dashboard stats error:', error);
+        console.error('❌ Dashboard stats error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return of({ totalEmployees: 0, totalDepartments: 0 });
       })
     );
   }
 
   getEmployeeStatistics(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/stats/summary`).pipe(
+    const url = `${this.apiUrl}/stats/summary`;
+    console.log('🔄 Fetching employee statistics from:', url);
+    
+    return this.http.get<any>(url).pipe(
+      tap(stats => console.log('✅ Employee statistics:', stats)),
       catchError(error => {
-        console.error('❌ Employee statistics error:', error);
+        console.error('❌ Employee statistics error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return of({ totalEmployees: 0, totalDepartments: 0 });
       })
     );
   }
 
   emailExists(email: string): Observable<boolean> {
-    return this.http.get<boolean>(`${this.apiUrl}/check-email?email=${email}`).pipe(
+    const url = `${this.apiUrl}/check-email?email=${encodeURIComponent(email)}`;
+    console.log('🔄 Checking email existence:', url);
+    
+    return this.http.get<boolean>(url).pipe(
+      tap(exists => console.log(`✅ Email ${email} exists:`, exists)),
       catchError(error => {
-        console.error('❌ Email check error:', error);
+        console.error('❌ Email check error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return of(false);
       })
     );
   }
 
   getDepartmentCount(): Observable<number> {
-    return this.http.get<number>(`${this.apiUrl}/departments/count`).pipe(
+    const url = `${this.apiUrl}/departments/count`;
+    console.log('🔄 Fetching department count from:', url);
+    
+    return this.http.get<number>(url).pipe(
+      tap(count => console.log('✅ Department count:', count)),
       catchError(error => {
-        console.error('❌ Department count error:', error);
+        console.error('❌ Department count error:', {
+          status: error.status,
+          message: error.message,
+          error: error.error
+        });
         return of(0);
+      })
+    );
+  }
+
+  // NEW: Test backend connection
+  testBackendConnection(): Observable<{success: boolean, url: string, data?: any, error?: any}> {
+    const testUrl = `${environment.apiUrl}/employees/departments`;
+    console.log('🔗 Testing backend connection to:', testUrl);
+    
+    return this.http.get<string[]>(testUrl).pipe(
+      tap(data => {
+        console.log('✅ Backend connection successful:', data);
+      }),
+      map(data => ({ success: true, url: testUrl, data })),
+      catchError(error => {
+        console.error('❌ Backend connection failed:', error);
+        return of({ 
+          success: false, 
+          url: testUrl, 
+          error: {
+            status: error.status,
+            message: error.message
+          }
+        });
       })
     );
   }
