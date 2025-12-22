@@ -5,7 +5,16 @@
   </h2>
 
   <mat-dialog-content>
-    <form [formGroup]="employeeForm" class="employee-form">
+    <!-- Loading Overlay -->
+    <div *ngIf="loadingData" class="loading-overlay">
+      <div class="loading-content">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading departments and positions...</p>
+      </div>
+    </div>
+
+    <!-- Main Form Content -->
+    <form [formGroup]="employeeForm" class="employee-form" [class.form-loading]="loadingData">
       <div class="form-row">
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>First Name</mat-label>
@@ -13,6 +22,7 @@
             matInput
             formControlName="firstName"
             placeholder="Enter first name"
+            [disabled]="loadingData"
           />
           <mat-icon matSuffix>person</mat-icon>
           <mat-error *ngIf="firstName?.hasError('required')">
@@ -32,6 +42,7 @@
             matInput
             formControlName="lastName"
             placeholder="Enter last name"
+            [disabled]="loadingData"
           />
           <mat-icon matSuffix>person</mat-icon>
           <mat-error *ngIf="lastName?.hasError('required')">
@@ -54,6 +65,7 @@
             formControlName="email"
             placeholder="Enter email address"
             type="email"
+            [disabled]="loadingData"
           />
           <mat-icon matSuffix>email</mat-icon>
           <mat-error *ngIf="email?.hasError('required')">
@@ -69,7 +81,7 @@
       <div class="form-row">
         <mat-form-field appearance="outline" class="country-code-field">
           <mat-label>Country Code</mat-label>
-          <mat-select formControlName="countryCode">
+          <mat-select formControlName="countryCode" [disabled]="loadingData">
             <mat-option
               *ngFor="let country of countryCodes"
               [value]="country.code"
@@ -89,6 +101,7 @@
             matInput
             formControlName="phoneNumber"
             placeholder="Enter phone number"
+            [disabled]="loadingData"
           />
           <mat-icon matSuffix>phone</mat-icon>
           <mat-hint *ngIf="!hidePhoneHint">
@@ -106,7 +119,7 @@
       <div class="form-row">
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Department</mat-label>
-          <mat-select formControlName="department">
+          <mat-select formControlName="department" [disabled]="loadingData">
             <mat-option value="">Select Department</mat-option>
             <mat-option *ngFor="let dept of departments" [value]="dept">
               {{ dept }}
@@ -120,7 +133,7 @@
 
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>Position</mat-label>
-          <mat-select formControlName="position">
+          <mat-select formControlName="position" [disabled]="loadingData">
             <mat-option value="">Select Position</mat-option>
             <mat-option *ngFor="let position of positions" [value]="position">
               {{ position }}
@@ -141,6 +154,7 @@
             formControlName="salary"
             placeholder="Enter salary"
             type="number"
+            [disabled]="loadingData"
           />
           <mat-icon matSuffix>attach_money</mat-icon>
           <mat-error *ngIf="salary?.hasError('required')">
@@ -172,15 +186,16 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="loading">Cancel</button>
+    <button mat-button (click)="onCancel()" [disabled]="loading || loadingData">Cancel</button>
     <button
       mat-raised-button
       color="primary"
       (click)="onSubmit()"
-      [disabled]="!employeeForm.valid || loading"
+      [disabled]="!employeeForm.valid || loading || loadingData"
     >
       <mat-icon>{{ isEdit ? "save" : "add" }}</mat-icon>
       {{ loading ? "PLEASE WAIT..." : buttonText }}
+      <mat-spinner *ngIf="loadingData" diameter="20" class="button-spinner"></mat-spinner>
     </button>
   </mat-dialog-actions>
 </div>
