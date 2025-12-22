@@ -31,6 +31,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         System.out.println("=== BUILDING SECURITY FILTER CHAIN ===");
+        System.out.println("✅ Making /departments and /positions endpoints PUBLIC");
         
         // Configure HTTP Security
         http
@@ -43,29 +44,67 @@ public class SecurityConfig {
             // 3. Use stateless sessions
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // 4. Configure request authorization
+            // 4. Configure request authorization - CRITICAL FIX
             .authorizeHttpRequests(auth -> auth
+                // ========== PUBLIC ENDPOINTS (NO AUTH REQUIRED) ==========
+                
                 // Allow all OPTIONS requests (CORS preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
-                // Public endpoints - no authentication required
-                .requestMatchers("/api/auth/**").permitAll()  // All auth endpoints
+                // Auth endpoints
+                .requestMatchers("/api/auth/**").permitAll()
+                
+                // Test endpoints
                 .requestMatchers("/api/test/**").permitAll()
+                
+                // H2 Console (for development)
                 .requestMatchers("/h2-console/**").permitAll()
+                
+                // Error endpoint
                 .requestMatchers("/error").permitAll()
                 
-                // Protected endpoints (require authentication)
+                // ✅ CRITICAL FIX: Make dropdown endpoints PUBLIC
+                .requestMatchers(HttpMethod.GET, "/api/employees/departments").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees/positions").permitAll()
+                
+                // ✅ Make stats endpoint public for dashboard
+                .requestMatchers(HttpMethod.GET, "/api/employees/stats/summary").permitAll()
+                
+                // ✅ Allow GET /employees for initial loading (optional, can remove if you want it protected)
+                .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
+                
+                // ========== PROTECTED ENDPOINTS (REQUIRE AUTH) ==========
+                
+                // Admin only endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
+                // Employee management endpoints (require auth)
+                .requestMatchers(HttpMethod.POST, "/api/employees/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/employees/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/employees/**").authenticated()
+                
+                // Allow authenticated access to other employee endpoints
                 .requestMatchers("/api/employees/**").authenticated()
                 
-                // Allow all other requests temporarily for debugging
-                .anyRequest().permitAll()
+                // ========== FALLBACK ==========
+                .anyRequest().authenticated()  // Protect everything else by default
             )
             
-            // 5. Add JWT authentication filter
+            // 5. Add headers for H2 console (development only)
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+            
+            // 6. Add JWT authentication filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         System.out.println("=== SECURITY CONFIGURATION COMPLETE ===");
+        System.out.println("Public endpoints:");
+        System.out.println("  • /api/auth/**");
+        System.out.println("  • /api/test/**");
+        System.out.println("  • GET /api/employees/departments ✅");
+        System.out.println("  • GET /api/employees/positions ✅");
+        System.out.println("  • GET /api/employees/stats/summary ✅");
+        System.out.println("  • GET /api/employees ✅");
+        
         return http.build();
     }
 
@@ -78,11 +117,10 @@ public class SecurityConfig {
         // Allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
-        "http://127.0.0.1:4200",
-        "https://employee-management-system-xi-henna.vercel.app",
-        "https://*.vercel.app" 
-            
-    ));
+            "http://127.0.0.1:4200",
+            "https://employee-management-system-xi-henna.vercel.app",
+            "https://employee-management-system-jxdj.onrender.com"
+        ));
         
         // Allow all HTTP methods
         configuration.setAllowedMethods(Arrays.asList(
@@ -118,6 +156,7 @@ public class SecurityConfig {
         System.out.println("CORS Configuration:");
         System.out.println("- Allowed Origins: " + configuration.getAllowedOrigins());
         System.out.println("- Allow Credentials: " + configuration.getAllowCredentials());
+        System.out.println("- Allowed Methods: " + configuration.getAllowedMethods());
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
