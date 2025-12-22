@@ -1,365 +1,174 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, tap, map } from 'rxjs/operators';
-import { environment } from '../environments/environment'; 
-import {
-  Employee,
-  EmployeeResponse,
-  EmployeeSearchCriteria,
-} from '../models/employee.model';
+package com.ems.service;
 
-@Injectable({
-  providedIn: 'root',
-})
-export class EmployeeService {
-  // UPDATED: Use environment configuration
-  private apiUrl = `${environment.apiUrl}/employees`;
-  private exportApiUrl = `${environment.apiUrl}/export`;
+import com.ems.entity.Employee;
+import com.ems.repository.EmployeeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
 
-  // FALLBACK DATA for when API fails
-  private fallbackDepartments = [
-    'IT', 'HR', 'Finance', 'Marketing', 
-    'Sales', 'Operations', 'R&D', 'Support'
-  ];
-  
-  private fallbackPositions = [
-    'Software Engineer', 'HR Manager', 'Financial Analyst', 
-    'Marketing Specialist', 'Sales Manager', 'Operations Manager',
-    'System Administrator', 'Frontend Developer', 'Backend Developer',
-    'UI/UX Designer', 'Data Analyst', 'Project Manager'
-  ];
+import java.util.*;
 
-  constructor(private http: HttpClient) {
-    console.log('🔧 EmployeeService initialized');
-    console.log('🌐 Environment:', environment.production ? 'PRODUCTION' : 'DEVELOPMENT');
-    console.log('🌐 API Base URL:', this.apiUrl);
-    console.log('🌐 Full URLs:');
-    console.log('  - Departments:', `${environment.apiUrl}/employees/departments`);
-    console.log('  - Positions:', `${environment.apiUrl}/employees/positions`);
-  }
+@Service
+public class EmployeeService {
 
-  getDepartments(): Observable<string[]> {
-    // UPDATED: Use environment.apiUrl directly
-    const url = `${environment.apiUrl}/employees/departments`;
-    console.log('🔄 Fetching departments from:', url);
-    
-    return this.http.get<string[]>(url).pipe(
-      tap(data => {
-        console.log('✅ Departments API success:', data);
-        if (!data || data.length === 0) {
-          console.warn('⚠️  API returned empty departments, using fallback');
-        }
-      }),
-      catchError((error: HttpErrorResponse) => {
-        console.error('❌ Departments API error:', {
-          status: error.status,
-          message: error.message,
-          url: error.url,
-          error: error.error
-        });
-        console.log('📋 Using fallback departments:', this.fallbackDepartments);
-        return of(this.fallbackDepartments);
-      })
-    );
-  }
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
-  getPositions(): Observable<string[]> {
-    // UPDATED: Use environment.apiUrl directly
-    const url = `${environment.apiUrl}/employees/positions`;
-    console.log('🔄 Fetching positions from:', url);
-    
-    return this.http.get<string[]>(url).pipe(
-      tap(data => {
-        console.log('✅ Positions API success:', data);
-        if (!data || data.length === 0) {
-          console.warn('⚠️  API returned empty positions, using fallback');
-        }
-      }),
-      catchError((error: HttpErrorResponse) => {
-        console.error('❌ Positions API error:', {
-          status: error.status,
-          message: error.message,
-          url: error.url,
-          error: error.error
-        });
-        console.log('📋 Using fallback positions:', this.fallbackPositions);
-        return of(this.fallbackPositions);
-      })
-    );
-  }
-
-  searchEmployees(
-    page: number = 0,
-    size: number = 10,
-    criteria: EmployeeSearchCriteria = {}
-  ): Observable<EmployeeResponse> {
-    let params = new HttpParams()
-      .set('page', page.toString())
-      .set('size', size.toString());
-
-    if (criteria.searchTerm) {
-      params = params.set('search', criteria.searchTerm);
-    }
-    if (criteria.department) {
-      params = params.set('department', criteria.department);
-    }
-    if (criteria.position) {
-      params = params.set('position', criteria.position);
-    }
-    if (criteria.minSalary) {
-      params = params.set('minSalary', criteria.minSalary.toString());
-    }
-    if (criteria.maxSalary) {
-      params = params.set('maxSalary', criteria.maxSalary.toString());
-    }
-
-    console.log('🔄 Fetching employees from:', this.apiUrl);
-    console.log('📋 Params:', params.toString());
-
-    return this.http.get<EmployeeResponse>(this.apiUrl, { params }).pipe(
-      tap(response => {
-        console.log('✅ Employees API response:', {
-          hasContent: response.content?.length > 0,
-          totalElements: response.totalElements, 
-          totalPages: response.totalPages,
-          contentLength: response.content?.length
-        });
-      }),
-      catchError((error: HttpErrorResponse) => {
-        console.error('❌ Search employees error:', {
-          status: error.status,
-          message: error.message,
-          url: error.url,
-          error: error.error
-        });
+    // UPDATED METHOD - Now accepts all search parameters
+    public Page<Employee> getAllEmployees(int page, int size, String search, 
+                                         String department, String position, 
+                                         Double minSalary, Double maxSalary) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("firstName").ascending());
         
-        const errorResponse: EmployeeResponse = {
-          content: [],
-          number: 0,              
-          size: size,            
-          totalElements: 0,       
-          totalPages: 0,
-          hasNext: false,        
-          hasPrevious: false     
-        };
-        return of(errorResponse);
-      })
-    );
-  }
+        // Use advanced search if any advanced filters are provided
+        if (department != null || position != null || minSalary != null || maxSalary != null) {
+            return employeeRepository.advancedSearch(search, department, position, minSalary, maxSalary, pageable);
+        }
+        // Otherwise use basic search
+        else if (search != null && !search.trim().isEmpty()) {
+            return employeeRepository.searchEmployees(search.trim(), pageable);
+        } else {
+            return employeeRepository.findAll(pageable);
+        }
+    }
 
-  getEmployeeById(id: number): Observable<Employee> {
-    const url = `${this.apiUrl}/${id}`;
-    console.log('🔄 Fetching employee:', url);
-    
-    return this.http.get<Employee>(url).pipe(
-      catchError(error => {
-        console.error(`❌ Get employee ${id} error:`, {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Employee not found'));
-      })
-    );
-  }
+    // Keep the old method for backward compatibility (optional)
+    public Page<Employee> getAllEmployees(int page, int size, String search) {
+        return getAllEmployees(page, size, search, null, null, null, null);
+    }
 
-  createEmployee(employee: Employee): Observable<Employee> {
-    console.log('🔄 Creating employee at:', this.apiUrl);
-    console.log('📋 Employee data:', employee);
-    
-    return this.http.post<Employee>(this.apiUrl, employee).pipe(
-      tap(response => {
-        console.log('✅ Employee created:', response);
-        console.log('📝 Response details:', {
-          id: response.id,
-          name: `${response.firstName} ${response.lastName}`,
-          email: response.email,
-          department: response.department,
-          position: response.position
-        });
-      }),
-      catchError(error => {
-        console.error('❌ Create employee error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Failed to create employee'));
-      })
-    );
-  }
+    public Employee getEmployeeById(Long id) {
+        Optional<Employee> employee = employeeRepository.findById(id);
+        return employee.orElseThrow(() -> new RuntimeException("Employee not found with id: " + id));
+    }
 
-  updateEmployee(id: number, employee: Employee): Observable<Employee> {
-    const url = `${this.apiUrl}/${id}`;
-    console.log('🔄 Updating employee at:', url);
-    console.log('📋 Employee data:', employee);
-    
-    return this.http.put<Employee>(url, employee).pipe(
-      tap(response => {
-        console.log('✅ Employee updated:', response);
-        console.log('📝 Response details:', {
-          id: response.id,
-          name: `${response.firstName} ${response.lastName}`,
-          department: response.department,
-          position: response.position
-        });
-      }),
-      catchError(error => {
-        console.error(`❌ Update employee ${id} error:`, {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Failed to update employee'));
-      })
-    );
-  }
+    public Employee saveEmployee(Employee employee) {
+        // Check if email already exists (for new employees)
+        if (employee.getId() == null && employeeRepository.existsByEmail(employee.getEmail())) {
+            throw new RuntimeException("Email already exists: " + employee.getEmail());
+        }
+        
+        // For updates, check if email exists for other employees
+        if (employee.getId() != null) {
+            Employee existing = getEmployeeById(employee.getId());
+            if (!existing.getEmail().equals(employee.getEmail()) && 
+                employeeRepository.existsByEmail(employee.getEmail())) {
+                throw new RuntimeException("Email already exists: " + employee.getEmail());
+            }
+        }
+        
+        return employeeRepository.save(employee);
+    }
 
-  deleteEmployee(id: number): Observable<void> {
-    const url = `${this.apiUrl}/${id}`;
-    console.log('🔄 Deleting employee:', url);
-    
-    return this.http.delete<void>(url).pipe(
-      tap(() => console.log(`✅ Employee ${id} deleted`)),
-      catchError(error => {
-        console.error(`❌ Delete employee ${id} error:`, {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Failed to delete employee'));
-      })
-    );
-  }
+    public void deleteEmployee(Long id) {
+        if (!employeeRepository.existsById(id)) {
+            throw new RuntimeException("Employee not found with id: " + id);
+        }
+        employeeRepository.deleteById(id);
+    }
 
-  exportToCSV(): Observable<Blob> {
-    const url = `${this.exportApiUrl}/employees/csv`;
-    console.log('🔄 Exporting to CSV from:', url);
-    
-    return this.http.get(url, {
-      responseType: 'blob',
-    }).pipe(
-      tap(() => console.log('✅ CSV export successful')),
-      catchError(error => {
-        console.error('❌ Export CSV error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Failed to export CSV'));
-      })
-    );
-  }
+    // ========== FIXED: Added null check ==========
+    public List<String> getDistinctDepartments() {
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("🔍 EmployeeService.getDistinctDepartments() called");
+        
+        try {
+            List<String> departments = employeeRepository.findDistinctDepartments();
+            System.out.println("📊 Database returned: " + departments);
+            System.out.println("📊 Is null? " + (departments == null));
+            
+            // ✅ FIX: Check for null FIRST, then check if empty
+            if (departments == null || departments.isEmpty()) {
+                System.out.println("⚠️  No departments in database, using defaults");
+                List<String> defaultDepartments = Arrays.asList(
+                    "IT", "HR", "Finance", "Marketing", 
+                    "Sales", "Operations", "Support", "Administration",
+                    "Engineering", "Customer Service"
+                );
+                System.out.println("✅ Returning defaults: " + defaultDepartments);
+                return defaultDepartments;
+            }
+            
+            System.out.println("✅ Returning from database: " + departments);
+            return departments;
+            
+        } catch (Exception e) {
+            System.out.println("❌ ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Always return something, never null
+            List<String> fallback = Arrays.asList("IT", "HR", "Finance", "Marketing", "Sales");
+            System.out.println("🔄 Returning fallback due to error: " + fallback);
+            return fallback;
+        } finally {
+            System.out.println("=".repeat(50) + "\n");
+        }
+    }
 
-  exportToExcel(): Observable<Blob> {
-    const url = `${this.exportApiUrl}/employees/excel`;
-    console.log('🔄 Exporting to Excel from:', url);
-    
-    return this.http.get(url, {
-      responseType: 'blob',
-    }).pipe(
-      tap(() => console.log('✅ Excel export successful')),
-      catchError(error => {
-        console.error('❌ Export Excel error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return throwError(() => new Error('Failed to export Excel'));
-      })
-    );
-  }
+    // ========== FIXED: Added null check ==========
+    public List<String> getDistinctPositions() {
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("🔍 EmployeeService.getDistinctPositions() called");
+        
+        try {
+            List<String> positions = employeeRepository.findDistinctPositions();
+            System.out.println("📊 Database returned: " + positions);
+            System.out.println("📊 Is null? " + (positions == null));
+            
+            // ✅ FIX: Check for null FIRST, then check if empty
+            if (positions == null || positions.isEmpty()) {
+                System.out.println("⚠️  No positions in database, using defaults");
+                List<String> defaultPositions = Arrays.asList(
+                    "Software Engineer", "HR Manager", "Financial Analyst",
+                    "Marketing Specialist", "Sales Representative", "Operations Manager",
+                    "System Administrator", "Frontend Developer", "Backend Developer",
+                    "Data Analyst", "Project Manager", "UI/UX Designer"
+                );
+                System.out.println("✅ Returning defaults: " + defaultPositions);
+                return defaultPositions;
+            }
+            
+            System.out.println("✅ Returning from database: " + positions);
+            return positions;
+            
+        } catch (Exception e) {
+            System.out.println("❌ ERROR: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Always return something, never null
+            List<String> fallback = Arrays.asList("Software Engineer", "HR Manager", "Financial Analyst");
+            System.out.println("🔄 Returning fallback due to error: " + fallback);
+            return fallback;
+        } finally {
+            System.out.println("=".repeat(50) + "\n");
+        }
+    }
 
-  getDashboardStats(): Observable<any> {
-    const url = `${this.apiUrl}/stats/summary`;
-    console.log('🔄 Fetching dashboard stats from:', url);
-    
-    return this.http.get<any>(url).pipe(
-      tap(stats => console.log('✅ Dashboard stats:', stats)),
-      catchError(error => {
-        console.error('❌ Dashboard stats error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return of({ totalEmployees: 0, totalDepartments: 0 });
-      })
-    );
-  }
+    public Page<Employee> getEmployeesByDepartment(String department, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("firstName").ascending());
+        return employeeRepository.findByDepartment(department, pageable);
+    }
 
-  getEmployeeStatistics(): Observable<any> {
-    const url = `${this.apiUrl}/stats/summary`;
-    console.log('🔄 Fetching employee statistics from:', url);
+    public List<Employee> getAllEmployeesForExport() {
+        return employeeRepository.findAll(Sort.by("firstName").ascending());
+    }
     
-    return this.http.get<any>(url).pipe(
-      tap(stats => console.log('✅ Employee statistics:', stats)),
-      catchError(error => {
-        console.error('❌ Employee statistics error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return of({ totalEmployees: 0, totalDepartments: 0 });
-      })
-    );
-  }
+    public boolean emailExists(String email) {
+        return employeeRepository.existsByEmail(email);
+    }
 
-  emailExists(email: string): Observable<boolean> {
-    const url = `${this.apiUrl}/check-email?email=${encodeURIComponent(email)}`;
-    console.log('🔄 Checking email existence:', url);
-    
-    return this.http.get<boolean>(url).pipe(
-      tap(exists => console.log(`✅ Email ${email} exists:`, exists)),
-      catchError(error => {
-        console.error('❌ Email check error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return of(false);
-      })
-    );
-  }
+    public Map<String, Object> getEmployeeStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalEmployees", employeeRepository.count());
+        stats.put("totalDepartments", getDepartmentCount());
+        return stats;
+    }
 
-  getDepartmentCount(): Observable<number> {
-    const url = `${this.apiUrl}/departments/count`;
-    console.log('🔄 Fetching department count from:', url);
-    
-    return this.http.get<number>(url).pipe(
-      tap(count => console.log('✅ Department count:', count)),
-      catchError(error => {
-        console.error('❌ Department count error:', {
-          status: error.status,
-          message: error.message,
-          error: error.error
-        });
-        return of(0);
-      })
-    );
-  }
-
-  // NEW: Test backend connection
-  testBackendConnection(): Observable<{success: boolean, url: string, data?: any, error?: any}> {
-    const testUrl = `${environment.apiUrl}/employees/departments`;
-    console.log('🔗 Testing backend connection to:', testUrl);
-    
-    return this.http.get<string[]>(testUrl).pipe(
-      tap(data => {
-        console.log('✅ Backend connection successful:', data);
-      }),
-      map(data => ({ success: true, url: testUrl, data })),
-      catchError(error => {
-        console.error('❌ Backend connection failed:', error);
-        return of({ 
-          success: false, 
-          url: testUrl, 
-          error: {
-            status: error.status,
-            message: error.message
-          }
-        });
-      })
-    );
-  }
+    public long getDepartmentCount() {
+        List<String> departments = getDistinctDepartments(); // Use the fixed method
+        return departments != null ? departments.size() : 0;
+    }
 }
