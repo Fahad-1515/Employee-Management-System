@@ -46,9 +46,7 @@ public class SecurityConfig {
             
             // 4. Configure request authorization - CRITICAL FIX
             .authorizeHttpRequests(auth -> auth
-                // ========== PUBLIC ENDPOINTS (NO AUTH REQUIRED) ==========
                 
-                // Allow all OPTIONS requests (CORS preflight)
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 
                 // Auth endpoints
@@ -118,7 +116,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
             "http://127.0.0.1:4200",
-            "https://employee-management-system-red-eta.vercel.app",
+            "https://employee-management-system-six-silk.vercel.app",
             "https://employee-management-system-jxdj.onrender.com"
         ));
         
