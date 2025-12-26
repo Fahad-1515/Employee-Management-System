@@ -13,7 +13,55 @@ import java.util.*;
 
 @Service
 public class EmployeeService {
+    @Transactional
+public List<Employee> createEmployeesBulk(List<EmployeeDTO> employeeDTOs) {
+    List<Employee> employees = employeeDTOs.stream()
+        .map(dto -> {
+            Employee employee = convertToEntity(dto);
+            employee.setVacationDays(20);
+            employee.setSickDays(10);
+            employee.setPersonalDays(5);
+            employee.setUsedVacation(0);
+            employee.setUsedSick(0);
+            employee.setUsedPersonal(0);
+            return employee;
+        })
+        .collect(Collectors.toList());
+    
+    return employeeRepository.saveAll(employees);
+}
 
+@Transactional
+public int deleteEmployeesBulk(List<Long> employeeIds) {
+    int deleted = 0;
+    for (Long id : employeeIds) {
+        try {
+            employeeRepository.deleteById(id);
+            deleted++;
+        } catch (Exception e) {
+            // Log error but continue with other deletions
+        }
+    }
+    return deleted;
+}
+
+@Transactional
+public int updateDepartmentBulk(List<Long> employeeIds, String department) {
+    int updated = 0;
+    for (Long id : employeeIds) {
+        Employee employee = employeeRepository.findById(id).orElse(null);
+        if (employee != null) {
+            employee.setDepartment(department);
+            employeeRepository.save(employee);
+            updated++;
+        }
+    }
+    return updated;
+}
+
+public List<Employee> importFromCSV(MultipartFile file) throws Exception {
+    return csvImportService.importEmployeesFromCSV(file);
+}
     @Autowired
     private EmployeeRepository employeeRepository;
 
