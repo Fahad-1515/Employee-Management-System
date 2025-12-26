@@ -50,6 +50,75 @@ public class EmployeeController {
                     .body(createErrorResponse("Failed to fetch employees: " + e.getMessage()));
         }
     }
+    @PostMapping("/bulk")
+public ResponseEntity<Map<String, Object>> createEmployeesBulk(@RequestBody List<EmployeeDTO> employees) {
+    try {
+        List<Employee> created = employeeService.createEmployeesBulk(employees);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully created " + created.size() + " employees");
+        response.put("count", created.size());
+        response.put("employees", created.stream()
+            .map(employeeService::convertToDTO)
+            .collect(Collectors.toList()));
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+}
+
+@DeleteMapping("/bulk")
+public ResponseEntity<Map<String, Object>> deleteEmployeesBulk(@RequestBody List<Long> employeeIds) {
+    try {
+        int deleted = employeeService.deleteEmployeesBulk(employeeIds);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully deleted " + deleted + " employees");
+        response.put("count", deleted);
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+}
+
+@PutMapping("/bulk/department")
+public ResponseEntity<Map<String, Object>> updateDepartmentBulk(
+        @RequestParam String department,
+        @RequestBody List<Long> employeeIds) {
+    try {
+        int updated = employeeService.updateDepartmentBulk(employeeIds, department);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Updated department for " + updated + " employees");
+        response.put("count", updated);
+        response.put("department", department);
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+}
+
+@PostMapping("/import/csv")
+public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam("file") MultipartFile file) {
+    try {
+        List<Employee> employees = employeeService.importFromCSV(file);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Successfully imported " + employees.size() + " employees");
+        response.put("count", employees.size());
+        response.put("employees", employees.stream()
+            .map(employeeService::convertToDTO)
+            .collect(Collectors.toList()));
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("error", e.getMessage());
+        error.put("details", e.getMessage());
+        return ResponseEntity.badRequest().body(error);
+    }
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getEmployee(@PathVariable Long id) {
