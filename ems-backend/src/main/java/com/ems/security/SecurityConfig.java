@@ -80,6 +80,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/employees/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/employees/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/employees/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/employees/bulk").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/employees/bulk").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/employees/bulk/department").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/employees/import/csv").hasRole("ADMIN")
+                .requestMatchers("/api/leave/**").authenticated()
                 
                 // Allow authenticated access to other employee endpoints
                 .requestMatchers("/api/employees/**").authenticated()
