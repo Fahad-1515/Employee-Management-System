@@ -116,7 +116,7 @@ public class SecurityConfig {
         // Allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
-            "https://employee-management-system-six-silk.vercel.app",
+            "https://employee-management-system-wheat-chi.vercel.app",
             "https://employee-management-system-jxdj.onrender.com"
         ));
         
