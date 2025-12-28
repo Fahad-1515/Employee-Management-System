@@ -2,13 +2,15 @@ package com.ems.controller;
 
 import com.ems.entity.Employee;
 import com.ems.service.EmployeeService;
+import com.ems.dto.EmployeeDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -21,6 +23,165 @@ public class EmployeeController {
 
     @Autowired
     private EmployeeService employeeService;
+
+    // ========== FIXED: Add missing endpoints for Angular ==========
+
+    @GetMapping("/stats/salary")
+    public ResponseEntity<?> getSalaryStatistics() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            List<Employee> employees = employeeService.getAllEmployeesForExport();
+            
+            if (!employees.isEmpty()) {
+                double totalSalary = employees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .sum();
+                double avgSalary = totalSalary / employees.size();
+                double minSalary = employees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .min()
+                    .orElse(0.0);
+                double maxSalary = employees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .max()
+                    .orElse(0.0);
+                
+                stats.put("averageSalary", String.format("%.2f", avgSalary));
+                stats.put("minSalary", String.format("%.2f", minSalary));
+                stats.put("maxSalary", String.format("%.2f", maxSalary));
+                stats.put("totalSalary", String.format("%.2f", totalSalary));
+                
+                // Department averages
+                Map<String, Double> deptAverages = new HashMap<>();
+                Map<String, List<Employee>> employeesByDept = employees.stream()
+                    .collect(Collectors.groupingBy(Employee::getDepartment));
+                
+                employeesByDept.forEach((dept, deptEmployees) -> {
+                    double deptAvg = deptEmployees.stream()
+                        .filter(e -> e.getSalary() != null)
+                        .mapToDouble(Employee::getSalary)
+                        .average()
+                        .orElse(0.0);
+                    deptAverages.put(dept, deptAvg);
+                });
+                
+                stats.put("departmentAverages", deptAverages);
+            }
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Failed to fetch salary statistics: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/stats/department")
+    public ResponseEntity<?> getDepartmentStatistics() {
+        try {
+            Map<String, Object> stats = new HashMap<>();
+            List<Employee> employees = employeeService.getAllEmployeesForExport();
+            
+            List<String> departments = employeeService.getDistinctDepartments();
+            stats.put("totalDepartments", departments.size());
+            
+            Map<String, Long> employeeCountByDepartment = employees.stream()
+                .filter(e -> e.getDepartment() != null)
+                .collect(Collectors.groupingBy(
+                    Employee::getDepartment,
+                    Collectors.counting()
+                ));
+            stats.put("employeeCountByDepartment", employeeCountByDepartment);
+            
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(createErrorResponse("Failed to fetch department statistics: " + e.getMessage()));
+        }
+    }
+
+    // ========== FIXED: Bulk operations with correct endpoints ==========
+
+    @PostMapping("/bulk/delete")
+    public ResponseEntity<Map<String, Object>> deleteEmployeesBulk(@RequestBody Map<String, Object> request) {
+        try {
+            List<Long> employeeIds = (List<Long>) request.get("employeeIds");
+            if (employeeIds == null || employeeIds.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "No employee IDs provided");
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            int deleted = employeeService.deleteEmployeesBulk(employeeIds);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Successfully deleted " + deleted + " employees");
+            response.put("count", deleted);
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("success", false);
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PutMapping("/bulk/update-department")
+    public ResponseEntity<Map<String, Object>> updateDepartmentBulk(@RequestBody Map<String, Object> request) {
+        try {
+            List<Long> employeeIds = (List<Long>) request.get("employeeIds");
+            String department = (String) request.get("department");
+            
+            if (employeeIds == null || employeeIds.isEmpty() || department == null) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Invalid request data");
+                error.put("success", false);
+                return ResponseEntity.badRequest().body(error);
+            }
+            
+            int updated = employeeService.updateDepartmentBulk(employeeIds, department);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Updated department for " + updated + " employees");
+            response.put("count", updated);
+            response.put("department", department);
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("success", false);
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // ========== FIXED: Import CSV endpoint format ==========
+
+    @PostMapping("/import/csv")
+    public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam("file") MultipartFile file) {
+        try {
+            List<Employee> employees = employeeService.importFromCSV(file);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("imported", employees.size());
+            response.put("failed", 0);
+            response.put("total", employees.size());
+            response.put("message", "Successfully imported " + employees.size() + " employees");
+            response.put("employees", employees.stream()
+                .map(employeeService::convertToDTO)
+                .collect(Collectors.toList()));
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("error", e.getMessage());
+            error.put("details", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // ========== EXISTING ENDPOINTS (with minor fixes) ==========
 
     @GetMapping
     public ResponseEntity<?> getEmployees(
@@ -38,7 +199,7 @@ public class EmployeeController {
             Map<String, Object> response = new HashMap<>();
             response.put("content", employees.getContent());
             response.put("currentPage", employees.getNumber());
-            response.put("totalItems", employees.getTotalElements());
+            response.put("totalElements", employees.getTotalElements());
             response.put("totalPages", employees.getTotalPages());
             response.put("pageSize", employees.getSize());
             response.put("hasNext", employees.hasNext());
@@ -50,75 +211,26 @@ public class EmployeeController {
                     .body(createErrorResponse("Failed to fetch employees: " + e.getMessage()));
         }
     }
+
     @PostMapping("/bulk")
-public ResponseEntity<Map<String, Object>> createEmployeesBulk(@RequestBody List<EmployeeDTO> employees) {
-    try {
-        List<Employee> created = employeeService.createEmployeesBulk(employees);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Successfully created " + created.size() + " employees");
-        response.put("count", created.size());
-        response.put("employees", created.stream()
-            .map(employeeService::convertToDTO)
-            .collect(Collectors.toList()));
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("error", e.getMessage());
-        return ResponseEntity.badRequest().body(error);
+    public ResponseEntity<Map<String, Object>> createEmployeesBulk(@RequestBody List<EmployeeDTO> employees) {
+        try {
+            List<Employee> created = employeeService.createEmployeesBulk(employees);
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Successfully created " + created.size() + " employees");
+            response.put("count", created.size());
+            response.put("employees", created.stream()
+                .map(employeeService::convertToDTO)
+                .collect(Collectors.toList()));
+            response.put("success", true);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            error.put("success", false);
+            return ResponseEntity.badRequest().body(error);
+        }
     }
-}
-
-@DeleteMapping("/bulk")
-public ResponseEntity<Map<String, Object>> deleteEmployeesBulk(@RequestBody List<Long> employeeIds) {
-    try {
-        int deleted = employeeService.deleteEmployeesBulk(employeeIds);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Successfully deleted " + deleted + " employees");
-        response.put("count", deleted);
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("error", e.getMessage());
-        return ResponseEntity.badRequest().body(error);
-    }
-}
-
-@PutMapping("/bulk/department")
-public ResponseEntity<Map<String, Object>> updateDepartmentBulk(
-        @RequestParam String department,
-        @RequestBody List<Long> employeeIds) {
-    try {
-        int updated = employeeService.updateDepartmentBulk(employeeIds, department);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Updated department for " + updated + " employees");
-        response.put("count", updated);
-        response.put("department", department);
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("error", e.getMessage());
-        return ResponseEntity.badRequest().body(error);
-    }
-}
-
-@PostMapping("/import/csv")
-public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam("file") MultipartFile file) {
-    try {
-        List<Employee> employees = employeeService.importFromCSV(file);
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Successfully imported " + employees.size() + " employees");
-        response.put("count", employees.size());
-        response.put("employees", employees.stream()
-            .map(employeeService::convertToDTO)
-            .collect(Collectors.toList()));
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("error", e.getMessage());
-        error.put("details", e.getMessage());
-        return ResponseEntity.badRequest().body(error);
-    }
-}
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getEmployee(@PathVariable Long id) {
@@ -139,73 +251,35 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
     public ResponseEntity<?> createEmployee(@RequestBody Map<String, Object> requestData) {
         System.out.println("\n" + "=".repeat(60));
         System.out.println("=== CREATE EMPLOYEE REQUEST ===");
-        System.out.println("Full Request Data: " + requestData);
         
         try {
-            System.out.println("\n=== FIELD ANALYSIS ===");
-            requestData.forEach((key, value) -> {
-                System.out.printf("%-15s = %-40s (Type: %s)%n", 
-                    key, 
-                    value != null ? value.toString() : "null",
-                    value != null ? value.getClass().getSimpleName() : "null"
-                );
-            });
-            
+            // Extract values (keeping your existing logic)
             String firstName = extractStringValue(requestData, "firstName");
             String lastName = extractStringValue(requestData, "lastName");
             String email = extractStringValue(requestData, "email");
             String phoneNumber = extractStringValue(requestData, "phoneNumber");
             String countryCode = extractStringValue(requestData, "countryCode", "+1");
             
-            // CRITICAL: Handle department and position
             String department = extractDepartmentPosition(requestData.get("department"), "department");
             String position = extractDepartmentPosition(requestData.get("position"), "position");
             
             Double salary = extractSalary(requestData.get("salary"));
             
-            System.out.println("\n=== EXTRACTED VALUES ===");
-            System.out.println("First Name: '" + firstName + "'");
-            System.out.println("Last Name: '" + lastName + "'");
-            System.out.println("Email: '" + email + "'");
-            System.out.println("Phone: '" + phoneNumber + "'");
-            System.out.println("Country Code: '" + countryCode + "'");
-            System.out.println("Department: '" + department + "'");
-            System.out.println("Position: '" + position + "'");
-            System.out.println("Salary: " + salary);
-            
+            // Validation
             List<String> validationErrors = new ArrayList<>();
-            
-            if (firstName == null || firstName.trim().isEmpty()) {
-                validationErrors.add("First name is required");
-            }
-            if (lastName == null || lastName.trim().isEmpty()) {
-                validationErrors.add("Last name is required");
-            }
-            if (email == null || email.trim().isEmpty()) {
-                validationErrors.add("Email is required");
-            } else if (!isValidEmail(email)) {
-                validationErrors.add("Email should be valid");
-            }
-            if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
-                validationErrors.add("Phone number is required");
-            }
-            if (department == null || department.trim().isEmpty()) {
-                validationErrors.add("Department is required");
-            }
-            if (position == null || position.trim().isEmpty()) {
-                validationErrors.add("Position is required");
-            }
-            if (salary == null || salary <= 0) {
-                validationErrors.add("Salary must be positive");
-            }
+            if (firstName == null || firstName.trim().isEmpty()) validationErrors.add("First name is required");
+            if (lastName == null || lastName.trim().isEmpty()) validationErrors.add("Last name is required");
+            if (email == null || email.trim().isEmpty()) validationErrors.add("Email is required");
+            if (phoneNumber == null || phoneNumber.trim().isEmpty()) validationErrors.add("Phone number is required");
+            if (department == null || department.trim().isEmpty()) validationErrors.add("Department is required");
+            if (position == null || position.trim().isEmpty()) validationErrors.add("Position is required");
+            if (salary == null || salary <= 0) validationErrors.add("Salary must be positive");
             
             if (!validationErrors.isEmpty()) {
-                System.out.println("❌ Validation errors: " + validationErrors);
                 return ResponseEntity.badRequest().body(Map.of(
                     "status", "VALIDATION_ERROR",
                     "message", "Validation failed",
-                    "errors", validationErrors,
-                    "receivedData", requestData
+                    "errors", validationErrors
                 ));
             }
             
@@ -216,6 +290,7 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
                 ));
             }
             
+            // Create employee
             Employee employee = new Employee();
             employee.setFirstName(firstName.trim());
             employee.setLastName(lastName.trim());
@@ -228,25 +303,11 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
             }
             employee.setPhoneNumber(finalPhone);
             employee.setCountryCode(countryCode);
-            
-            // Set department and position
             employee.setDepartment(department.trim());
             employee.setPosition(position.trim());
             employee.setSalary(salary);
             
-            System.out.println("✅ Employee object created successfully");
-            System.out.println("Department set to: " + employee.getDepartment());
-            System.out.println("Position set to: " + employee.getPosition());
-            
             Employee savedEmployee = employeeService.saveEmployee(employee);
-            
-            System.out.println("\n✅ EMPLOYEE SAVED SUCCESSFULLY");
-            System.out.println("ID: " + savedEmployee.getId());
-            System.out.println("Name: " + savedEmployee.getFirstName() + " " + savedEmployee.getLastName());
-            System.out.println("Email: " + savedEmployee.getEmail());
-            System.out.println("Department: " + savedEmployee.getDepartment());
-            System.out.println("Position: " + savedEmployee.getPosition());
-            System.out.println("=".repeat(60) + "\n");
             
             return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
                 "status", "SUCCESS",
@@ -269,75 +330,44 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(
                     "status", "ERROR",
-                    "message", "Failed to create employee: " + e.getMessage(),
-                    "errorDetails", e.toString()
+                    "message", "Failed to create employee: " + e.getMessage()
                 ));
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateEmployee(@PathVariable Long id, @RequestBody Map<String, Object> requestData) {
-        System.out.println("\n" + "=".repeat(60));
-        System.out.println("=== UPDATE EMPLOYEE REQUEST ===");
-        System.out.println("Employee ID: " + id);
-        System.out.println("Request Data: " + requestData);
-        
         try {
-            // Check if employee exists
             Employee existingEmployee = employeeService.getEmployeeById(id);
             if (existingEmployee == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(createErrorResponse("Employee not found with id: " + id));
             }
             
+            // Extract values
             String firstName = extractStringValue(requestData, "firstName", existingEmployee.getFirstName());
             String lastName = extractStringValue(requestData, "lastName", existingEmployee.getLastName());
             String email = extractStringValue(requestData, "email", existingEmployee.getEmail());
             String phoneNumber = extractStringValue(requestData, "phoneNumber", existingEmployee.getPhoneNumber());
             String countryCode = extractStringValue(requestData, "countryCode", existingEmployee.getCountryCode());
             
-            // Handle department and position
             String department = extractDepartmentPosition(requestData.get("department"), "department");
-            if (department == null) {
-                department = existingEmployee.getDepartment();
-            }
+            if (department == null) department = existingEmployee.getDepartment();
             
             String position = extractDepartmentPosition(requestData.get("position"), "position");
-            if (position == null) {
-                position = existingEmployee.getPosition();
-            }
+            if (position == null) position = existingEmployee.getPosition();
             
             Double salary = extractSalary(requestData.get("salary"));
-            if (salary == null) {
-                salary = existingEmployee.getSalary();
-            }
+            if (salary == null) salary = existingEmployee.getSalary();
             
-            System.out.println("\n=== EXTRACTED VALUES ===");
-            System.out.println("Department: '" + department + "'");
-            System.out.println("Position: '" + position + "'");
-            
+            // Validation
             List<String> validationErrors = new ArrayList<>();
-            
-            if (firstName == null || firstName.trim().isEmpty()) {
-                validationErrors.add("First name is required");
-            }
-            if (lastName == null || lastName.trim().isEmpty()) {
-                validationErrors.add("Last name is required");
-            }
-            if (email == null || email.trim().isEmpty()) {
-                validationErrors.add("Email is required");
-            } else if (!isValidEmail(email)) {
-                validationErrors.add("Email should be valid");
-            }
-            if (department == null || department.trim().isEmpty()) {
-                validationErrors.add("Department is required");
-            }
-            if (position == null || position.trim().isEmpty()) {
-                validationErrors.add("Position is required");
-            }
-            if (salary == null || salary <= 0) {
-                validationErrors.add("Salary must be positive");
-            }
+            if (firstName == null || firstName.trim().isEmpty()) validationErrors.add("First name is required");
+            if (lastName == null || lastName.trim().isEmpty()) validationErrors.add("Last name is required");
+            if (email == null || email.trim().isEmpty()) validationErrors.add("Email is required");
+            if (department == null || department.trim().isEmpty()) validationErrors.add("Department is required");
+            if (position == null || position.trim().isEmpty()) validationErrors.add("Position is required");
+            if (salary == null || salary <= 0) validationErrors.add("Salary must be positive");
             
             if (!validationErrors.isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -348,7 +378,7 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
                     ));
             }
             
-            // Check if email is being changed and already exists
+            // Check email uniqueness
             if (!existingEmployee.getEmail().equals(email) && employeeService.emailExists(email)) {
                 return ResponseEntity.badRequest()
                     .body(Map.of(
@@ -357,11 +387,11 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
                     ));
             }
             
+            // Update employee
             existingEmployee.setFirstName(firstName.trim());
             existingEmployee.setLastName(lastName.trim());
             existingEmployee.setEmail(email.trim().toLowerCase());
             
-            // Format phone number
             String finalPhone = phoneNumber.trim();
             if (!finalPhone.startsWith("+")) {
                 finalPhone = countryCode + finalPhone;
@@ -374,24 +404,13 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
             
             Employee updatedEmployee = employeeService.saveEmployee(existingEmployee);
             
-            System.out.println("✅ Employee updated successfully");
-            
             return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
                 "message", "Employee updated successfully",
-                "employee", Map.of(
-                    "id", updatedEmployee.getId(),
-                    "firstName", updatedEmployee.getFirstName(),
-                    "lastName", updatedEmployee.getLastName(),
-                    "email", updatedEmployee.getEmail(),
-                    "department", updatedEmployee.getDepartment(),
-                    "position", updatedEmployee.getPosition()
-                )
+                "employee", employeeService.convertToDTO(updatedEmployee)
             ));
             
         } catch (Exception e) {
-            System.out.println("❌ Error updating employee: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(createErrorResponse("Failed to update employee: " + e.getMessage()));
         }
@@ -400,7 +419,6 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         try {
-            // Check if employee exists
             Employee existingEmployee = employeeService.getEmployeeById(id);
             if (existingEmployee == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -409,9 +427,10 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
 
             employeeService.deleteEmployee(id);
             
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("message", "Employee deleted successfully");
-            response.put("deletedId", id.toString());
+            response.put("deletedId", id);
+            response.put("success", true);
             
             return ResponseEntity.ok(response);
             
@@ -480,6 +499,7 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
         }
     }
 
+    // ========== HELPER METHODS ==========
     
     private String extractStringValue(Map<String, Object> data, String key) {
         return extractStringValue(data, key, null);
@@ -493,50 +513,34 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
         return value.toString().trim();
     }
     
-    // CRITICAL: Extract department/position from object or string
     private String extractDepartmentPosition(Object obj, String fieldName) {
         if (obj == null) {
-            System.out.println(fieldName + " is null");
             return null;
         }
         
-        System.out.println("Processing " + fieldName + ": " + obj + " (Type: " + obj.getClass().getSimpleName() + ")");
-        
         if (obj instanceof String) {
-            String str = (String) obj;
-            System.out.println(fieldName + " is String: '" + str + "'");
-            return str;
+            return ((String) obj).trim();
         }
         
-        // If it's a Map (like {value: "IT", label: "IT Department"})
         if (obj instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) obj;
-            System.out.println(fieldName + " is Map: " + map);
-            
             String[] possibleKeys = {"value", "name", "label", "id", "key"};
             
             for (String key : possibleKeys) {
                 Object value = map.get(key);
                 if (value != null) {
-                    String result = value.toString().trim();
-                    System.out.println("Found " + fieldName + " with key '" + key + "': '" + result + "'");
-                    return result;
+                    return value.toString().trim();
                 }
             }
             
-            // If no common keys found, try first non-null value
             for (Object value : map.values()) {
                 if (value != null) {
-                    String result = value.toString().trim();
-                    System.out.println("Using first non-null value for " + fieldName + ": '" + result + "'");
-                    return result;
+                    return value.toString().trim();
                 }
             }
         }
         
-        String result = obj.toString().trim();
-        System.out.println("Fallback for " + fieldName + ": '" + result + "'");
-        return result;
+        return obj.toString().trim();
     }
     
     private Double extractSalary(Object salaryObj) {
@@ -560,50 +564,32 @@ public ResponseEntity<Map<String, Object>> importEmployeesFromCSV(@RequestParam(
         return email != null && email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
     }
 
-    // Helper method to create error responses
     private Map<String, Object> createErrorResponse(String message) {
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("error", message);
         errorResponse.put("timestamp", System.currentTimeMillis());
+        errorResponse.put("success", false);
         return errorResponse;
     }
-    
-    @PostMapping("/debug-form")
-    public ResponseEntity<?> debugFormData(@RequestBody Map<String, Object> formData) {
-        System.out.println("\n=== DEBUG FORM DATA ===");
+    @GetMapping("/all")
+public ResponseEntity<?> getAllEmployeesForExport() {
+    try {
+        List<Employee> employees = employeeService.getAllEmployeesForExport();
+        List<EmployeeDTO> employeeDTOs = employees.stream()
+            .map(employeeService::convertToDTO)
+            .collect(Collectors.toList());
         
-        // Log everything
-        formData.forEach((key, value) -> {
-            System.out.printf("%-15s = %-40s (Type: %s)%n", 
-                key, 
-                value != null ? value.toString() : "null",
-                value != null ? value.getClass().getSimpleName() : "null"
-            );
-        });
-        
-        // Specifically check department and position
-        Object dept = formData.get("department");
-        Object pos = formData.get("position");
-        
-        System.out.println("\n=== DEPARTMENT ANALYSIS ===");
-        System.out.println("Value: " + dept);
-        System.out.println("Type: " + (dept != null ? dept.getClass().getName() : "null"));
-        
-        System.out.println("\n=== POSITION ANALYSIS ===");
-        System.out.println("Value: " + pos);
-        System.out.println("Type: " + (pos != null ? pos.getClass().getName() : "null"));
-        
-        return ResponseEntity.ok(Map.of(
-            "message", "Form data received",
-            "department", Map.of(
-                "value", dept,
-                "type", dept != null ? dept.getClass().getName() : "null"
-            ),
-            "position", Map.of(
-                "value", pos,
-                "type", pos != null ? pos.getClass().getName() : "null"
-            ),
-            "allData", formData
-        ));
+        return ResponseEntity.ok(employeeDTOs);
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(createErrorResponse("Failed to fetch all employees: " + e.getMessage()));
     }
 }
+    @PostMapping("/debug-form")
+    public ResponseEntity<?> debugFormData(@RequestBody Map<String, Object> formData) {
+        return ResponseEntity.ok(Map.of(
+            "message", "Form data received",
+            "data", formData
+        ));
+    }
+} 

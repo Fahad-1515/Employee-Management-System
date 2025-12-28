@@ -4,13 +4,29 @@ export interface Employee {
   lastName: string;
   email: string;
   phoneNumber: string;
-  countryCode: string; 
+  countryCode: string;
   department: string;
   position: string;
   salary: number;
-  hireDate?: string; 
+  hireDate?: string;
   createdAt?: string;
   updatedAt?: string;
+
+  // ADD THESE PROPERTIES TO FIX THE ERRORS:
+  profilePicture?: string;
+  leaveBalance?: {
+    vacation: number;
+    sick: number;
+    personal: number;
+    usedVacation: number;
+    usedSick: number;
+    usedPersonal: number;
+  };
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+  };
 }
 
 export interface EmployeeResponse {
@@ -19,7 +35,6 @@ export interface EmployeeResponse {
   totalPages: number;
   size: number;
   number: number;
-
   hasNext: boolean;
   hasPrevious: boolean;
 }

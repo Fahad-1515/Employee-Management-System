@@ -1,0 +1,89 @@
+<div class="export-dialog-container">
+  <h2 mat-dialog-title>
+    <mat-icon>download</mat-icon>
+    Export Data
+  </h2>
+
+  <mat-dialog-content>
+    <div class="export-section">
+      <!-- Format Selection -->
+      <div class="format-section">
+        <h3>Select Export Format</h3>
+        <mat-radio-group [(ngModel)]="selectedFormat" class="format-options">
+          <mat-radio-button
+            *ngFor="let format of formats"
+            [value]="format.value"
+            class="format-option"
+          >
+            <mat-icon>{{ format.icon }}</mat-icon>
+            {{ format.label }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+
+      <!-- Column Selection -->
+      <div class="columns-section">
+        <div class="columns-header">
+          <h3>Select Columns to Export</h3>
+          <div class="column-actions">
+            <button mat-button (click)="selectAllColumns()">
+              <mat-icon>check_box</mat-icon>
+              Select All
+            </button>
+            <button mat-button (click)="deselectAllColumns()">
+              <mat-icon>check_box_outline_blank</mat-icon>
+              Deselect All
+            </button>
+          </div>
+        </div>
+
+        <div class="columns-list">
+          <mat-checkbox
+            *ngFor="let column of columns"
+            [(ngModel)]="column.selected"
+            (change)="toggleColumn(column)"
+          >
+            {{ column.label }}
+          </mat-checkbox>
+        </div>
+      </div>
+
+      <!-- Options -->
+      <div class="options-section">
+        <mat-checkbox [(ngModel)]="includeHeaders">
+          Include Headers
+        </mat-checkbox>
+
+        <mat-checkbox [(ngModel)]="emailReport"> Email Report </mat-checkbox>
+
+        <mat-form-field
+          *ngIf="emailReport"
+          appearance="outline"
+          class="email-field"
+        >
+          <mat-label>Recipient Email</mat-label>
+          <input
+            matInput
+            [(ngModel)]="recipientEmail"
+            type="email"
+            placeholder="email@example.com"
+          />
+        </mat-form-field>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="dialogRef.close()">Cancel</button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="exportData()"
+      [disabled]="loading || selectedColumns.length === 0"
+    >
+      <mat-icon *ngIf="!loading">download</mat-icon>
+      <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+      {{ loading ? "Exporting..." : "Export Data" }}
+    </button>
+  </mat-dialog-actions>
+</div>

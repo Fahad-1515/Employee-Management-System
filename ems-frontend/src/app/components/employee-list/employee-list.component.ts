@@ -7,6 +7,8 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee, EmployeeSearchCriteria } from '../../models/employee.model';
 import { EmployeeFormComponent } from '../employee-form/employee-form.component';
+import { ImportDialogComponent } from '../shared/import-dialog/import-dialog.component';
+import { ExportDialogComponent } from '../shared/export-dialog/export-dialog.component';
 
 @Component({
   selector: 'app-employee-list',
@@ -24,6 +26,7 @@ export class EmployeeListComponent implements OnInit {
     'salary',
     'actions',
   ];
+
   dataSource = new MatTableDataSource<Employee>();
   loading = false;
 
@@ -37,6 +40,10 @@ export class EmployeeListComponent implements OnInit {
   totalElements = 0;
   pageSize = 10;
   currentPage = 0;
+
+  // Bulk Operations
+  selectedEmployees = new Set<number>();
+  showBulkToolbar = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -116,6 +123,40 @@ export class EmployeeListComponent implements OnInit {
     });
   }
 
+  openImportDialog(): void {
+    const dialogRef = this.dialog.open(ImportDialogComponent, {
+      width: '850px',
+      maxHeight: '90vh',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.success) {
+        this.snackBar.open(
+          `Successfully imported ${result.imported} employees`,
+          'Close',
+          { duration: 3000 }
+        );
+        this.loadEmployees(); // Refresh the list
+      }
+    });
+  }
+
+  openExportDialog(): void {
+    const dialogRef = this.dialog.open(ExportDialogComponent, {
+      width: '700px',
+      data: { defaultFormat: 'excel' },
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.success) {
+        this.snackBar.open('Export completed successfully!', 'Close', {
+          duration: 3000,
+        });
+      }
+    });
+  }
+
   onSearch(): void {
     this.currentPage = 0;
     this.loadEmployees();
@@ -123,6 +164,8 @@ export class EmployeeListComponent implements OnInit {
 
   onClearFilters(): void {
     this.searchCriteria = {};
+    this.selectedEmployees.clear();
+    this.showBulkToolbar = false;
     this.onSearch();
   }
 
@@ -206,20 +249,110 @@ export class EmployeeListComponent implements OnInit {
       },
     });
   }
-  private downloadFile(
-    blob: Blob,
-    filename: string,
-    contentType: string
-  ): void {
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    window.URL.revokeObjectURL(url);
-  }
 
   toggleAdvancedSearch(): void {
     this.showAdvancedSearch = !this.showAdvancedSearch;
+  }
+
+  // Bulk Operations Methods
+  toggleSelection(id: number): void {
+    if (this.selectedEmployees.has(id)) {
+      this.selectedEmployees.delete(id);
+    } else {
+      this.selectedEmployees.add(id);
+    }
+    this.updateBulkToolbar();
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedEmployees.has(id);
+  }
+
+  selectAll(): void {
+    if (this.selectedEmployees.size === this.dataSource.data.length) {
+      this.selectedEmployees.clear();
+    } else {
+      this.dataSource.data.forEach((employee) => {
+        if (employee.id) this.selectedEmployees.add(employee.id);
+      });
+    }
+    this.updateBulkToolbar();
+  }
+
+  updateBulkToolbar(): void {
+    this.showBulkToolbar = this.selectedEmployees.size > 0;
+  }
+
+  clearSelection(): void {
+    this.selectedEmployees.clear();
+    this.showBulkToolbar = false;
+  }
+  getDisplayedColumnsWithSelect(): string[] {
+    return ['select', ...this.displayedColumns];
+  }
+  bulkDelete(): void {
+    const count = this.selectedEmployees.size;
+    if (count === 0 || !confirm(`Delete ${count} selected employees?`)) return;
+
+    const employeeIds = Array.from(this.selectedEmployees);
+    this.employeeService.bulkDelete(employeeIds).subscribe({
+      next: () => {
+        this.snackBar.open(`Deleted ${count} employees successfully`, 'Close', {
+          duration: 3000,
+        });
+        this.clearSelection();
+        this.loadEmployees();
+      },
+      error: () => {
+        this.snackBar.open('Error deleting employees', 'Close', {
+          duration: 5000,
+        });
+      },
+    });
+  }
+
+  exportSelected(): void {
+    if (this.selectedEmployees.size === 0) return;
+
+    // Create CSV content
+    const headers = [
+      'ID',
+      'First Name',
+      'Last Name',
+      'Email',
+      'Department',
+      'Position',
+      'Salary',
+    ];
+    const selectedData = this.dataSource.data.filter(
+      (emp) => emp.id && this.selectedEmployees.has(emp.id)
+    );
+
+    const csvContent = [
+      headers.join(','),
+      ...selectedData.map((emp) =>
+        [
+          emp.id,
+          `"${emp.firstName}"`,
+          `"${emp.lastName}"`,
+          `"${emp.email}"`,
+          `"${emp.department}"`,
+          `"${emp.position}"`,
+          emp.salary,
+        ].join(',')
+      ),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_employees_${Date.now()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    this.snackBar.open(`Exported ${selectedData.length} employees`, 'Close', {
+      duration: 3000,
+    });
   }
 }

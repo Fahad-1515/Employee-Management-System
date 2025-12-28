@@ -1,8 +1,8 @@
-/* src/app/components/analytics/analytics.component.css */
 .analytics-container {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+  min-height: calc(100vh - 64px);
 }
 
 .analytics-header {
@@ -20,11 +20,12 @@
   gap: 10px;
   color: #3f51b5;
   margin-bottom: 8px;
+  font-size: 2rem;
 }
 
 .header-content p {
   color: #666;
-  font-size: 16px;
+  font-size: 1rem;
   margin: 0;
 }
 
@@ -39,12 +40,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 100px 20px;
   color: #666;
 }
 
 .loading-container p {
   margin-top: 15px;
+  font-size: 1rem;
 }
 
 /* Metrics Grid */
@@ -56,35 +58,38 @@
 }
 
 .metric-card {
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .metric-card mat-card-content {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 20px;
+  padding: 24px;
 }
 
 .metric-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+  width: 70px;
+  height: 70px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
+  flex-shrink: 0;
 }
 
 .metric-icon mat-icon {
-  font-size: 30px;
-  width: 30px;
-  height: 30px;
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
 }
 
 .metric-icon.total-employees {
@@ -104,30 +109,46 @@
 }
 
 .metric-info h3 {
-  font-size: 2em;
-  font-weight: 300;
+  font-size: 2.2rem;
+  font-weight: 700;
   margin: 0 0 5px 0;
   color: #333;
+  line-height: 1;
 }
 
 .metric-info p {
   margin: 0;
   color: #666;
-  font-size: 14px;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 /* Charts Grid */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
+  gap: 24px;
   margin-bottom: 30px;
 }
 
 .chart-card {
-  height: 400px;
+  height: 420px;
   display: flex;
   flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chart-card mat-card-header {
+  padding: 20px 20px 0;
+}
+
+.chart-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  color: #333;
 }
 
 .chart-card mat-card-content {
@@ -139,58 +160,72 @@
 
 .chart-container {
   flex: 1;
-  min-height: 250px;
   position: relative;
+  min-height: 250px;
+}
+
+/* Ensure charts are responsive */
+.chart-container canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-legend {
   margin-top: 15px;
   max-height: 120px;
   overflow-y: auto;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 0;
-  font-size: 12px;
+  padding: 6px 0;
+  font-size: 0.9rem;
 }
 
 .legend-color {
   width: 12px;
   height: 12px;
-  border-radius: 2px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
 .legend-label {
   flex: 1;
   color: #333;
+  font-weight: 500;
 }
 
 .legend-value {
   color: #666;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 
 /* Salary Distribution */
 .distribution-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px;
   padding: 10px 0;
 }
 
 .distribution-item {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 16px;
 }
 
 .distribution-range {
   width: 80px;
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
+  font-size: 0.9rem;
+  flex-shrink: 0;
 }
 
 .distribution-bar {
@@ -199,6 +234,7 @@
   background: #f0f0f0;
   border-radius: 10px;
   overflow: hidden;
+  position: relative;
 }
 
 .distribution-fill {
@@ -206,13 +242,16 @@
   background: linear-gradient(90deg, #667eea, #764ba2);
   border-radius: 10px;
   transition: width 0.5s ease;
+  min-width: 4px;
 }
 
 .distribution-count {
   width: 100px;
   text-align: right;
   color: #666;
-  font-size: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 /* Statistics Table */
@@ -220,37 +259,64 @@
   margin-top: 20px;
 }
 
+.stats-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .stats-table {
   width: 100%;
   border-collapse: collapse;
-}
-
-.stats-table th,
-.stats-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .stats-table th {
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px;
+  text-align: left;
   font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stats-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
   color: #333;
+  font-size: 0.9rem;
 }
 
 .stats-table tr:hover {
   background: #f8f9fa;
 }
 
+.stats-table tr:last-child td {
+  border-bottom: none;
+}
+
 /* Responsive Design */
+@media (max-width: 1200px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    height: 380px;
+  }
+}
+
 @media (max-width: 768px) {
   .analytics-container {
-    padding: 10px;
+    padding: 16px;
   }
 
   .analytics-header {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
   }
 
   .header-actions {
@@ -259,15 +325,23 @@
 
   .metrics-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .metric-card mat-card-content {
+    padding: 20px;
+  }
+
+  .metric-info h3 {
+    font-size: 1.8rem;
   }
 
   .charts-grid {
-    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .chart-card {
-    height: auto;
-    min-height: 300px;
+    height: 350px;
   }
 
   .distribution-item {
@@ -279,5 +353,40 @@
   .distribution-range,
   .distribution-count {
     width: auto;
+    text-align: left;
+  }
+
+  .stats-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .stats-table th,
+  .stats-table td {
+    padding: 12px;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .metric-card mat-card-content {
+    gap: 16px;
+  }
+
+  .metric-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .metric-icon mat-icon {
+    font-size: 28px;
+  }
+
+  .metric-info h3 {
+    font-size: 1.6rem;
   }
 }

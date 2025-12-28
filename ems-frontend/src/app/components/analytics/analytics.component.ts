@@ -1,8 +1,8 @@
-// src/app/components/analytics/analytics.component.ts
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { EmployeeService } from '../../services/employee.service';
 import { Employee } from '../../models/employee.model';
 import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartType } from 'chart.js';
 
 @Component({
   selector: 'app-analytics',
@@ -27,18 +27,38 @@ export class AnalyticsComponent implements OnInit {
     recentHires: 0,
   };
 
-  // Chart Data
-  departmentChartData: any;
-  salaryChartData: any;
-  positionChartData: any;
+  // Chart Data with proper types
+  departmentChartData: ChartConfiguration['data'] = {
+    labels: [],
+    datasets: [],
+  };
 
-  // Chart Options (Updated for Chart.js v4)
-  chartOptions = {
+  salaryChartData: ChartConfiguration['data'] = {
+    labels: [],
+    datasets: [],
+  };
+
+  positionChartData: ChartConfiguration['data'] = {
+    labels: [],
+    datasets: [],
+  };
+
+  // Chart Types
+  departmentChartType: ChartType = 'pie';
+  salaryChartType: ChartType = 'bar';
+  positionChartType: ChartType = 'bar';
+
+  // Chart Options
+  chartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'bottom' as const,
+        position: 'bottom',
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+        },
       },
       tooltip: {
         callbacks: {
@@ -52,7 +72,7 @@ export class AnalyticsComponent implements OnInit {
     },
   };
 
-  salaryChartOptions = {
+  salaryChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -72,7 +92,7 @@ export class AnalyticsComponent implements OnInit {
         beginAtZero: true,
         ticks: {
           callback: (value: any) => {
-            return '$' + value?.toLocaleString() || '0';
+            return '$' + value?.toLocaleString();
           },
         },
       },
@@ -98,7 +118,6 @@ export class AnalyticsComponent implements OnInit {
       error: (error) => {
         console.error('Error loading analytics:', error);
         this.loading = false;
-        // Initialize with empty data to prevent template errors
         this.initializeEmptyCharts();
       },
     });
@@ -122,8 +141,8 @@ export class AnalyticsComponent implements OnInit {
       employees.length > 0 ? this.analytics.totalSalary / employees.length : 0;
 
     // Department statistics
-    const departmentMap = new Map();
-    const positionMap = new Map();
+    const departmentMap = new Map<string, number>();
+    const positionMap = new Map<string, number>();
 
     employees.forEach((employee) => {
       if (!employee.department) return;
@@ -132,7 +151,7 @@ export class AnalyticsComponent implements OnInit {
       if (departmentMap.has(employee.department)) {
         departmentMap.set(
           employee.department,
-          departmentMap.get(employee.department) + 1
+          departmentMap.get(employee.department)! + 1
         );
       } else {
         departmentMap.set(employee.department, 1);
@@ -143,7 +162,7 @@ export class AnalyticsComponent implements OnInit {
         if (positionMap.has(employee.position)) {
           positionMap.set(
             employee.position,
-            positionMap.get(employee.position) + 1
+            positionMap.get(employee.position)! + 1
           );
         } else {
           positionMap.set(employee.position, 1);
@@ -185,7 +204,7 @@ export class AnalyticsComponent implements OnInit {
 
     this.analytics.salaryDistribution = salaryRanges;
 
-    // Recent hires (last 30 days - mock data for demo)
+    // Recent hires (mock data)
     this.analytics.recentHires = Math.floor(Math.random() * 5) + 1;
   }
 
@@ -220,7 +239,7 @@ export class AnalyticsComponent implements OnInit {
       ],
     };
 
-    // Salary Chart (Bar chart for average salary by department)
+    // Salary Chart
     const departmentSalaries = this.analytics.departmentStats.map((dept) => {
       const deptEmployees = this.employees.filter(
         (emp) => emp.department === dept.name
@@ -263,7 +282,7 @@ export class AnalyticsComponent implements OnInit {
       ],
     };
 
-    // Refresh charts if they exist
+    // Refresh charts
     if (this.chart) {
       this.chart.update();
     }
@@ -317,7 +336,6 @@ export class AnalyticsComponent implements OnInit {
     );
   }
 
-  // Initialize empty charts when no data is available
   private initializeEmptyCharts(): void {
     this.departmentChartData = {
       labels: ['No Data'],

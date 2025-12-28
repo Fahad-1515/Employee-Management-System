@@ -1,39 +1,76 @@
 <div class="app-container">
-  <!-- Header -->
-  <mat-toolbar color="primary" class="main-header" *ngIf="currentUser">
+  <!-- Header (Only show when authenticated) -->
+  <mat-toolbar
+    color="primary"
+    class="main-header"
+    *ngIf="showHeader && currentUser"
+  >
     <button mat-icon-button (click)="toggleSidebar()" class="menu-btn">
       <mat-icon>menu</mat-icon>
     </button>
 
-    <span class="app-title">{{ title }}</span>
+    <div class="app-title" (click)="navigateTo('/dashboard')">
+      <mat-icon>business</mat-icon>
+      <span>{{ title }}</span>
+    </div>
 
     <span class="spacer"></span>
 
-    <!-- User Menu -->
-    <div class="user-info">
-      <span class="user-name">{{ currentUser.username }}</span>
-      <!-- ✅ Removed ? -->
-      <span class="user-role">{{ userRole }}</span>
+    <!-- Quick Actions -->
+    <div class="quick-actions" *ngIf="authService.isAdmin()">
+      <button
+        mat-icon-button
+        matTooltip="Add Employee"
+        (click)="router.navigate(['/employee/add'])"
+      >
+        <mat-icon>person_add</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        matTooltip="Import Data"
+        (click)="router.navigate(['/employees'])"
+      >
+        <mat-icon>upload</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        matTooltip="Export Data"
+        (click)="router.navigate(['/employees'])"
+      >
+        <mat-icon>download</mat-icon>
+      </button>
     </div>
 
-    <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-btn">
-      <div class="user-avatar">{{ userInitials }}</div>
-    </button>
+    <!-- User Menu -->
+    <div class="user-info">
+      <div class="user-details">
+        <span class="user-name">{{ currentUser?.username }}</span>
+        <span class="user-role">{{ userRole }}</span>
+      </div>
+      <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-btn">
+        <div class="user-avatar">{{ userInitials }}</div>
+      </button>
+    </div>
 
     <mat-menu #userMenu="matMenu">
       <div class="user-menu-header">
         <div class="user-avatar-large">{{ userInitials }}</div>
-        <div class="user-details">
-          <strong>{{ currentUser.username }}</strong>
-          <!-- ✅ Removed ? -->
+        <div class="user-info-details">
+          <strong>{{ currentUser?.username }}</strong>
           <span>{{ userRole }}</span>
+          <small>{{ currentUser?.email || "user@example.com" }}</small>
         </div>
       </div>
       <mat-divider></mat-divider>
-      <button mat-menu-item routerLink="/profile">
+      <button mat-menu-item (click)="navigateTo('/profile')">
         <mat-icon>account_circle</mat-icon>
-        <span>Profile</span>
+        <span>My Profile</span>
       </button>
+      <button mat-menu-item (click)="navigateTo('/settings')">
+        <mat-icon>settings</mat-icon>
+        <span>Settings</span>
+      </button>
+      <mat-divider></mat-divider>
       <button mat-menu-item (click)="logout()">
         <mat-icon>logout</mat-icon>
         <span>Logout</span>
@@ -41,64 +78,64 @@
     </mat-menu>
   </mat-toolbar>
 
-  <!-- Main Content -->
-  <div class="main-content" *ngIf="currentUser">
-    <!-- Sidebar -->
+  <!-- Main Content Area -->
+  <div class="main-content" *ngIf="showHeader && currentUser">
+    <!-- Sidebar Navigation -->
     <mat-sidenav-container class="sidenav-container">
-      <mat-sidenav #sidenav mode="side" [opened]="isSidebarOpen" class="sidebar">
+      <mat-sidenav
+        #sidenav
+        mode="side"
+        [opened]="isSidebarOpen"
+        class="sidebar"
+        [style.width]="isSidebarOpen ? '250px' : '64px'"
+      >
         <mat-nav-list>
-          <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
-            <mat-icon>dashboard</mat-icon>
-            <span>Dashboard</span>
-          </a>
-          <a mat-list-item routerLink="/employees" routerLinkActive="active">
-            <mat-icon>people</mat-icon>
-            <span>Employees</span>
-            <mat-icon class="menu-badge" *ngIf="authService.isAdmin()">star</mat-icon>
-            <!-- ✅ Now public -->
-          </a>
           <a
             mat-list-item
-            routerLink="/add-employee"
+            *ngFor="let item of filteredNavItems"
+            [routerLink]="item.route"
             routerLinkActive="active"
-            *ngIf="authService.isAdmin()"
+            [matTooltip]="!isSidebarOpen ? item.label : ''"
           >
-            <!-- ✅ Now public -->
-            <mat-icon>person_add</mat-icon>
-            <span>Add Employee</span>
-          </a>
-          <a
-            mat-list-item
-            routerLink="/departments"
-            routerLinkActive="active"
-            *ngIf="authService.isAdmin()"
-          >
-            <!-- ✅ Now public -->
-            <mat-icon>business</mat-icon>
-            <span>Departments</span>
-          </a>
-          <a
-            mat-list-item
-            routerLink="/reports"
-            routerLinkActive="active"
-            *ngIf="authService.isManager()"
-          >
-            <!-- ✅ Now public -->
-            <mat-icon>assessment</mat-icon>
-            <span>Reports</span>
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span *ngIf="isSidebarOpen" class="nav-label">{{
+              item.label
+            }}</span>
+            <mat-icon
+              *ngIf="item.roles.includes('ADMIN') && isSidebarOpen"
+              class="admin-badge"
+              matTooltip="Admin Only"
+              >star</mat-icon
+            >
           </a>
         </mat-nav-list>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-footer" *ngIf="isSidebarOpen">
+          <div class="system-status">
+            <mat-icon class="status-icon online">fiber_manual_record</mat-icon>
+            <span class="status-text">System Online</span>
+          </div>
+          <small class="version">v1.0.0</small>
+        </div>
       </mat-sidenav>
 
-      <!-- Page Content -->
+      <!-- Main Content -->
       <mat-sidenav-content class="content-area">
-        <router-outlet></router-outlet>
+        <div class="content-wrapper">
+          <router-outlet></router-outlet>
+        </div>
       </mat-sidenav-content>
     </mat-sidenav-container>
   </div>
 
-  <!-- Login Page (when not authenticated) -->
-  <div class="auth-content" *ngIf="!currentUser">
+  <!-- Auth Pages (Login) -->
+  <div class="auth-content" *ngIf="!showHeader || !currentUser">
     <router-outlet></router-outlet>
+  </div>
+
+  <!-- Loading Overlay (Optional) -->
+  <div class="loading-overlay" *ngIf="false">
+    <mat-spinner diameter="50"></mat-spinner>
   </div>
 </div>

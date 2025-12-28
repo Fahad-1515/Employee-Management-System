@@ -1,0 +1,70 @@
+<div class="leave-approval-dialog">
+  <h2 mat-dialog-title>
+    <mat-icon>assignment_turned_in</mat-icon>
+    Review Leave Request
+  </h2>
+
+  <mat-dialog-content>
+    <div *ngIf="data?.leave" class="leave-details">
+      <div class="detail-row">
+        <strong>Employee:</strong>
+        <span>{{ data.leave.employeeName || "N/A" }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>Leave Type:</strong>
+        <span class="leave-type">{{ data.leave.leaveType }}</span>
+      </div>
+      <div class="detail-row">
+        <strong>Dates:</strong>
+        <span>
+          {{ data.leave.startDate | date : "mediumDate" }}
+          to
+          {{ data.leave.endDate | date : "mediumDate" }}
+          ({{ data.leave.totalDays }} days)
+        </span>
+      </div>
+      <div class="detail-row">
+        <strong>Reason:</strong>
+        <p class="reason">{{ data.leave.reason }}</p>
+      </div>
+      <div class="detail-row">
+        <strong>Status:</strong>
+        <span [class]="'status-' + data.leave.status.toLowerCase()">
+          {{ data.leave.status }}
+        </span>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Comments (Optional)</mat-label>
+        <textarea
+          matInput
+          [(ngModel)]="comments"
+          rows="3"
+          placeholder="Add any comments for the employee..."
+        ></textarea>
+      </mat-form-field>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="cancel()" [disabled]="loading">Cancel</button>
+    <button
+      mat-raised-button
+      color="warn"
+      (click)="reject()"
+      [disabled]="loading"
+    >
+      <mat-icon>close</mat-icon>
+      Reject
+    </button>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="approve()"
+      [disabled]="loading"
+    >
+      <mat-icon>check</mat-icon>
+      Approve
+    </button>
+  </mat-dialog-actions>
+</div>

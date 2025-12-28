@@ -1,0 +1,229 @@
+<div class="leave-request-container">
+  <div class="leave-request-header">
+    <h1>
+      <mat-icon>beach_access</mat-icon>
+      Request Leave
+    </h1>
+    <p>Submit a new leave request for approval</p>
+  </div>
+
+  <div class="leave-request-content">
+    <!-- Leave Balance Summary -->
+    <mat-card class="balance-card" *ngIf="leaveBalance">
+      <mat-card-header>
+        <mat-card-title>Your Leave Balance</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="balance-grid">
+          <div class="balance-item">
+            <mat-icon class="balance-icon vacation">beach_access</mat-icon>
+            <div class="balance-info">
+              <strong>Vacation</strong>
+              <span
+                >{{
+                  leaveBalance.vacationDays - leaveBalance.usedVacation
+                }}
+                days remaining</span
+              >
+            </div>
+          </div>
+          <div class="balance-item">
+            <mat-icon class="balance-icon sick">medical_services</mat-icon>
+            <div class="balance-info">
+              <strong>Sick Leave</strong>
+              <span
+                >{{ leaveBalance.sickDays - leaveBalance.usedSick }} days
+                remaining</span
+              >
+            </div>
+          </div>
+          <div class="balance-item">
+            <mat-icon class="balance-icon personal">person</mat-icon>
+            <div class="balance-info">
+              <strong>Personal</strong>
+              <span
+                >{{
+                  leaveBalance.personalDays - leaveBalance.usedPersonal
+                }}
+                days remaining</span
+              >
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Leave Request Form -->
+    <mat-card class="form-card">
+      <mat-card-header>
+        <mat-card-title>Leave Application Form</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <form
+          [formGroup]="leaveForm"
+          (ngSubmit)="onSubmit()"
+          class="leave-form"
+        >
+          <!-- Leave Type -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Leave Type</mat-label>
+            <mat-select formControlName="leaveType">
+              <mat-option *ngFor="let type of leaveTypes" [value]="type.value">
+                <mat-icon>{{ type.icon }}</mat-icon>
+                {{ type.label }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="leaveForm.get('leaveType')?.hasError('required')">
+              Leave type is required
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Date Range -->
+          <div class="date-range">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Start Date</mat-label>
+              <input
+                matInput
+                [matDatepicker]="startPicker"
+                formControlName="startDate"
+                [min]="minDate"
+                [max]="maxDate"
+              />
+              <mat-datepicker-toggle
+                matSuffix
+                [for]="startPicker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+              <mat-error
+                *ngIf="leaveForm.get('startDate')?.hasError('required')"
+              >
+                Start date is required
+              </mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>End Date</mat-label>
+              <input
+                matInput
+                [matDatepicker]="endPicker"
+                formControlName="endDate"
+                [min]="minDate"
+                [max]="maxDate"
+              />
+              <mat-datepicker-toggle
+                matSuffix
+                [for]="endPicker"
+              ></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+              <mat-error *ngIf="leaveForm.get('endDate')?.hasError('required')">
+                End date is required
+              </mat-error>
+            </mat-form-field>
+          </div>
+
+          <!-- Duration Info -->
+          <div class="duration-info">
+            <div class="duration-item">
+              <mat-icon>calendar_today</mat-icon>
+              <span><strong>Duration:</strong> {{ calculateDays() }} days</span>
+            </div>
+            <div class="duration-item">
+              <mat-icon>check_circle</mat-icon>
+              <span
+                ><strong>Available:</strong> {{ getAvailableDays() }} days</span
+              >
+            </div>
+          </div>
+
+          <!-- Half Day Option -->
+          <div class="half-day-section">
+            <mat-checkbox formControlName="isHalfDay"
+              >Half Day Leave</mat-checkbox
+            >
+            <mat-radio-group
+              formControlName="halfDayType"
+              *ngIf="leaveForm.get('isHalfDay')?.value"
+            >
+              <mat-radio-button value="FIRST_HALF">First Half</mat-radio-button>
+              <mat-radio-button value="SECOND_HALF"
+                >Second Half</mat-radio-button
+              >
+            </mat-radio-group>
+          </div>
+
+          <!-- Reason -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Reason for Leave</mat-label>
+            <textarea
+              matInput
+              formControlName="reason"
+              rows="4"
+              placeholder="Please provide details about your leave..."
+            ></textarea>
+            <mat-hint>Minimum 10 characters required</mat-hint>
+            <mat-error *ngIf="leaveForm.get('reason')?.hasError('required')">
+              Reason is required
+            </mat-error>
+            <mat-error *ngIf="leaveForm.get('reason')?.hasError('minlength')">
+              Reason must be at least 10 characters
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Additional Info -->
+          <div class="additional-info">
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Contact During Leave</mat-label>
+              <input
+                matInput
+                formControlName="contactDuringLeave"
+                placeholder="Phone number or email"
+              />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="form-field">
+              <mat-label>Handover To</mat-label>
+              <input
+                matInput
+                formControlName="handoverTo"
+                placeholder="Colleague's name"
+              />
+            </mat-form-field>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-actions">
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="leaveForm.invalid || loading"
+              class="submit-btn"
+            >
+              <mat-icon>send</mat-icon>
+              {{ loading ? "Submitting..." : "Submit Leave Request" }}
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Important Notes -->
+    <mat-card class="notes-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>info</mat-icon>
+          Important Information
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <ul class="notes-list">
+          <li>Submit leave requests at least 3 days in advance</li>
+          <li>Emergency leaves require manager approval</li>
+          <li>Ensure proper handover before going on leave</li>
+          <li>Keep your emergency contact information updated</li>
+          <li>Leave balance is updated after approval</li>
+        </ul>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

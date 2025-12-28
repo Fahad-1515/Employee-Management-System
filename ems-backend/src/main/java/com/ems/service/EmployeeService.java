@@ -1,5 +1,6 @@
 package com.ems.service;
 
+import com.ems.dto.EmployeeDTO;
 import com.ems.entity.Employee;
 import com.ems.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,62 +9,120 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class EmployeeService {
-    @Transactional
-public List<Employee> createEmployeesBulk(List<EmployeeDTO> employeeDTOs) {
-    List<Employee> employees = employeeDTOs.stream()
-        .map(dto -> {
-            Employee employee = convertToEntity(dto);
-            employee.setVacationDays(20);
-            employee.setSickDays(10);
-            employee.setPersonalDays(5);
-            employee.setUsedVacation(0);
-            employee.setUsedSick(0);
-            employee.setUsedPersonal(0);
-            return employee;
-        })
-        .collect(Collectors.toList());
     
-    return employeeRepository.saveAll(employees);
-}
-
-@Transactional
-public int deleteEmployeesBulk(List<Long> employeeIds) {
-    int deleted = 0;
-    for (Long id : employeeIds) {
-        try {
-            employeeRepository.deleteById(id);
-            deleted++;
-        } catch (Exception e) {
-            // Log error but continue with other deletions
-        }
-    }
-    return deleted;
-}
-
-@Transactional
-public int updateDepartmentBulk(List<Long> employeeIds, String department) {
-    int updated = 0;
-    for (Long id : employeeIds) {
-        Employee employee = employeeRepository.findById(id).orElse(null);
-        if (employee != null) {
-            employee.setDepartment(department);
-            employeeRepository.save(employee);
-            updated++;
-        }
-    }
-    return updated;
-}
-
-public List<Employee> importFromCSV(MultipartFile file) throws Exception {
-    return csvImportService.importEmployeesFromCSV(file);
-}
     @Autowired
     private EmployeeRepository employeeRepository;
+    
+    @Autowired
+    private CSVImportService csvImportService;
+
+    // ========== UPDATED CONVERSION METHODS ==========
+    
+    public EmployeeDTO convertToDTO(Employee employee) {
+        EmployeeDTO dto = new EmployeeDTO();
+        dto.setId(employee.getId());
+        dto.setFirstName(employee.getFirstName());
+        dto.setLastName(employee.getLastName());
+        dto.setEmail(employee.getEmail());
+        dto.setDepartment(employee.getDepartment());
+        dto.setPosition(employee.getPosition());
+        
+        // Now these can be null - no need for null checks
+        dto.setVacationDays(employee.getVacationDays());
+        dto.setSickDays(employee.getSickDays());
+        dto.setPersonalDays(employee.getPersonalDays());
+        dto.setUsedVacation(employee.getUsedVacation());
+        dto.setUsedSick(employee.getUsedSick());
+        dto.setUsedPersonal(employee.getUsedPersonal());
+        
+        return dto;
+    }
+    
+    private Employee convertToEntity(EmployeeDTO dto) {
+        Employee employee = new Employee();
+        employee.setId(dto.getId());
+        employee.setFirstName(dto.getFirstName());
+        employee.setLastName(dto.getLastName());
+        employee.setEmail(dto.getEmail());
+        employee.setDepartment(dto.getDepartment());
+        employee.setPosition(dto.getPosition());
+        
+        // Set default phone values if not provided
+        employee.setPhoneNumber("+1234567890");
+        employee.setCountryCode("+1");
+        employee.setSalary(50000.0);
+        
+        // Set leave balances from DTO - can be null
+        employee.setVacationDays(dto.getVacationDays());
+        employee.setSickDays(dto.getSickDays());
+        employee.setPersonalDays(dto.getPersonalDays());
+        employee.setUsedVacation(dto.getUsedVacation());
+        employee.setUsedSick(dto.getUsedSick());
+        employee.setUsedPersonal(dto.getUsedPersonal());
+        
+        return employee;
+    }
+    
+    // ========== EXISTING METHODS (WITH MINOR UPDATES) ==========
+    
+    @Transactional
+    public List<Employee> createEmployeesBulk(List<EmployeeDTO> employeeDTOs) {
+        List<Employee> employees = employeeDTOs.stream()
+            .map(dto -> {
+                Employee employee = convertToEntity(dto);
+                // Ensure defaults for any null values
+                if (employee.getVacationDays() == null) employee.setVacationDays(20);
+                if (employee.getSickDays() == null) employee.setSickDays(10);
+                if (employee.getPersonalDays() == null) employee.setPersonalDays(5);
+                if (employee.getUsedVacation() == null) employee.setUsedVacation(0);
+                if (employee.getUsedSick() == null) employee.setUsedSick(0);
+                if (employee.getUsedPersonal() == null) employee.setUsedPersonal(0);
+                return employee;
+            })
+            .collect(Collectors.toList());
+        
+        return employeeRepository.saveAll(employees);
+    }
+
+    @Transactional
+    public int deleteEmployeesBulk(List<Long> employeeIds) {
+        int deleted = 0;
+        for (Long id : employeeIds) {
+            try {
+                employeeRepository.deleteById(id);
+                deleted++;
+            } catch (Exception e) {
+                System.err.println("Error deleting employee " + id + ": " + e.getMessage());
+                // Continue with other deletions
+            }
+        }
+        return deleted;
+    }
+
+    @Transactional
+    public int updateDepartmentBulk(List<Long> employeeIds, String department) {
+        int updated = 0;
+        for (Long id : employeeIds) {
+            Employee employee = employeeRepository.findById(id).orElse(null);
+            if (employee != null) {
+                employee.setDepartment(department);
+                employeeRepository.save(employee);
+                updated++;
+            }
+        }
+        return updated;
+    }
+
+    public List<Employee> importFromCSV(MultipartFile file) throws Exception {
+        return csvImportService.importEmployeesFromCSV(file);
+    }
 
     public Page<Employee> getAllEmployees(int page, int size, String search, 
                                          String department, String position, 
@@ -107,6 +166,14 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
             }
         }
         
+        // Ensure leave balances have defaults if null
+        if (employee.getVacationDays() == null) employee.setVacationDays(20);
+        if (employee.getSickDays() == null) employee.setSickDays(10);
+        if (employee.getPersonalDays() == null) employee.setPersonalDays(5);
+        if (employee.getUsedVacation() == null) employee.setUsedVacation(0);
+        if (employee.getUsedSick() == null) employee.setUsedSick(0);
+        if (employee.getUsedPersonal() == null) employee.setUsedPersonal(0);
+        
         return employeeRepository.save(employee);
     }
 
@@ -117,7 +184,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
         employeeRepository.deleteById(id);
     }
 
-    // ========== FIXED: Added null check ==========
     public List<String> getDistinctDepartments() {
         System.out.println("\n" + "=".repeat(50));
         System.out.println("🔍 EmployeeService.getDistinctDepartments() called");
@@ -127,7 +193,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
             System.out.println("📊 Database returned: " + departments);
             System.out.println("📊 Is null? " + (departments == null));
             
-            // ✅ FIX: Check for null FIRST, then check if empty
             if (departments == null || departments.isEmpty()) {
                 System.out.println("⚠️  No departments in database, using defaults");
                 List<String> defaultDepartments = Arrays.asList(
@@ -146,7 +211,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
             System.out.println("❌ ERROR: " + e.getMessage());
             e.printStackTrace();
             
-            // Always return something, never null
             List<String> fallback = Arrays.asList("IT", "HR", "Finance", "Marketing", "Sales");
             System.out.println("🔄 Returning fallback due to error: " + fallback);
             return fallback;
@@ -155,7 +219,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
         }
     }
 
-    // ========== FIXED: Added null check ==========
     public List<String> getDistinctPositions() {
         System.out.println("\n" + "=".repeat(50));
         System.out.println("🔍 EmployeeService.getDistinctPositions() called");
@@ -165,7 +228,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
             System.out.println("📊 Database returned: " + positions);
             System.out.println("📊 Is null? " + (positions == null));
             
-            // ✅ FIX: Check for null FIRST, then check if empty
             if (positions == null || positions.isEmpty()) {
                 System.out.println("⚠️  No positions in database, using defaults");
                 List<String> defaultPositions = Arrays.asList(
@@ -185,7 +247,6 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
             System.out.println("❌ ERROR: " + e.getMessage());
             e.printStackTrace();
             
-            // Always return something, never null
             List<String> fallback = Arrays.asList("Software Engineer", "HR Manager", "Financial Analyst");
             System.out.println("🔄 Returning fallback due to error: " + fallback);
             return fallback;
@@ -209,13 +270,98 @@ public List<Employee> importFromCSV(MultipartFile file) throws Exception {
 
     public Map<String, Object> getEmployeeStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("totalEmployees", employeeRepository.count());
-        stats.put("totalDepartments", getDepartmentCount());
+        
+        try {
+            long totalEmployees = employeeRepository.count();
+            List<String> departments = getDistinctDepartments();
+            long totalDepartments = departments != null ? departments.size() : 0;
+            
+            stats.put("totalEmployees", totalEmployees);
+            stats.put("totalDepartments", totalDepartments);
+            
+            List<Employee> allEmployees = employeeRepository.findAll();
+            if (!allEmployees.isEmpty()) {
+                double totalSalary = allEmployees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .sum();
+                double avgSalary = totalSalary / allEmployees.size();
+                double minSalary = allEmployees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .min()
+                    .orElse(0.0);
+                double maxSalary = allEmployees.stream()
+                    .filter(e -> e.getSalary() != null)
+                    .mapToDouble(Employee::getSalary)
+                    .max()
+                    .orElse(0.0);
+                
+                stats.put("averageSalary", String.format("%.2f", avgSalary));
+                stats.put("minSalary", String.format("%.2f", minSalary));
+                stats.put("maxSalary", String.format("%.2f", maxSalary));
+                stats.put("totalSalaryExpense", String.format("%.2f", totalSalary));
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error calculating statistics: " + e.getMessage());
+            stats.put("error", "Failed to calculate statistics");
+        }
+        
         return stats;
     }
 
     public long getDepartmentCount() {
-        List<String> departments = getDistinctDepartments(); // Use the fixed method
+        List<String> departments = getDistinctDepartments();
         return departments != null ? departments.size() : 0;
+    }
+    
+    // ========== ADDITIONAL HELPER METHODS ==========
+    
+    public List<EmployeeDTO> getAllEmployeesAsDTO() {
+        List<Employee> employees = employeeRepository.findAll();
+        return employees.stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+    
+    public Employee updateEmployeeLeaveBalances(Long id, Integer vacationDays, Integer sickDays, 
+                                              Integer personalDays) {
+        Employee employee = getEmployeeById(id);
+        if (vacationDays != null) employee.setVacationDays(vacationDays);
+        if (sickDays != null) employee.setSickDays(sickDays);
+        if (personalDays != null) employee.setPersonalDays(personalDays);
+        return employeeRepository.save(employee);
+    }
+    
+    public EmployeeDTO getEmployeeDTOById(Long id) {
+        Employee employee = getEmployeeById(id);
+        return convertToDTO(employee);
+    }
+    
+    // ========== NEW METHOD: For creating Employee from form data ==========
+    
+    public Employee createEmployeeFromFormData(String firstName, String lastName, String email,
+                                              String phoneNumber, String countryCode,
+                                              String department, String position, Double salary) {
+        Employee employee = new Employee();
+        employee.setFirstName(firstName);
+        employee.setLastName(lastName);
+        employee.setEmail(email);
+        employee.setPhoneNumber(phoneNumber);
+        employee.setCountryCode(countryCode);
+        employee.setDepartment(department);
+        employee.setPosition(position);
+        employee.setSalary(salary);
+        
+        // Set default leave balances
+        employee.setVacationDays(20);
+        employee.setSickDays(10);
+        employee.setPersonalDays(5);
+        employee.setUsedVacation(0);
+        employee.setUsedSick(0);
+        employee.setUsedPersonal(0);
+        
+        return saveEmployee(employee);
     }
 }

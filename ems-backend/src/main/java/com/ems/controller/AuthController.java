@@ -6,10 +6,9 @@ import com.ems.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,11 +17,8 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")  
+@CrossOrigin(origins = "*")
 public class AuthController {
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -33,7 +29,12 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // === PUBLIC TEST ENDPOINTS ===
+    // ========== REMOVE THESE SECURITY RISKS! ==========
+    // DELETE these insecure endpoints:
+    // @PostMapping("/test-login")  - SECURITY RISK!
+    // @PostMapping("/open-login")  - SECURITY RISK!
+
+    // === HEALTH CHECK ENDPOINTS ===
     
     @GetMapping("/test")
     public ResponseEntity<?> test() {
@@ -45,47 +46,7 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/test-login")
-    public ResponseEntity<?> testLogin(@RequestBody(required = false) LoginRequest loginRequest) {
-        System.out.println("=== TEST LOGIN ENDPOINT HIT ===");
-        
-        // Generate a test token
-        String token = jwtUtil.generateToken("testuser");
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("username", "testuser");
-        response.put("role", "ADMIN");
-        response.put("email", "test@ems.com");
-        response.put("expiresIn", 86400000);
-        response.put("message", "Test login successful - no validation");
-        
-        System.out.println("✅ Test login response generated");
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/open-login")
-    public ResponseEntity<?> openLogin(@RequestBody LoginRequest loginRequest) {
-        System.out.println("=== OPEN LOGIN (NO VALIDATION) ===");
-        System.out.println("Received: " + loginRequest.getUsername() + " / " + 
-                          (loginRequest.getPassword() != null ? "[PASSWORD]" : "null"));
-        
-        // Always return success
-        String token = jwtUtil.generateToken(loginRequest.getUsername());
-        
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("username", loginRequest.getUsername());
-        response.put("role", "ADMIN");
-        response.put("email", loginRequest.getUsername() + "@ems.com");
-        response.put("expiresIn", 86400000);
-        response.put("message", "Open login - no validation performed");
-        
-        System.out.println("✅ Open login successful for: " + loginRequest.getUsername());
-        return ResponseEntity.ok(response);
-    }
-
-    // === MAIN LOGIN ENDPOINT ===
+    // === MAIN LOGIN ENDPOINT (FIXED) ===
     
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) { 
@@ -102,7 +63,7 @@ public class AuthController {
             if (user == null) {
                 System.out.println("❌ USER NOT FOUND: " + loginRequest.getUsername());
                 
-                // Check hardcoded users as fallback
+                // Check hardcoded users as fallback (for development only)
                 if ("admin".equals(loginRequest.getUsername()) && "admin123".equals(loginRequest.getPassword())) {
                     System.out.println("⚠️  Using hardcoded admin fallback");
                     return createSuccessResponse("admin", "ADMIN", "admin@ems.com");
@@ -129,7 +90,7 @@ public class AuthController {
                 System.out.println("BCrypt password match: " + passwordMatches);
             }
             
-            // Fallback to direct comparison if BCrypt fails
+            // Fallback to direct comparison if BCrypt fails (for development only)
             if (!passwordMatches) {
                 System.out.println("⚠️  Trying direct password comparison...");
                 if ("admin123".equals(loginRequest.getPassword()) && "admin".equals(user.getUsername())) {
@@ -164,33 +125,103 @@ public class AuthController {
         }
     }
 
-    // === UTILITY METHODS ===
+    // ========== ADD THESE MISSING ENDPOINTS ==========
     
-    private ResponseEntity<?> createSuccessResponse(String username, String role, String email) {
-        String token = jwtUtil.generateToken(username);
+    @GetMapping("/users/me")
+    public ResponseEntity<?> getCurrentUser() {
+        System.out.println("=== GET CURRENT USER ===");
+        
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(createErrorResponse("Not authenticated"));
+        }
+        
+        String username = authentication.getName();
+        System.out.println("Current user: " + username);
+        
+        User user = userService.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(createErrorResponse("User not found"));
+        }
         
         Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("username", username);
-        response.put("role", role);
-        response.put("email", email);
-        response.put("expiresIn", 86400000);
-        response.put("message", "Login successful");
+        response.put("username", user.getUsername());
+        response.put("email", user.getEmail());
+        response.put("role", user.getRole().toString());
         
-        System.out.println("✅ Login successful for: " + username);
+        System.out.println("✅ User info retrieved: " + username);
         return ResponseEntity.ok(response);
     }
-    
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error", message);
-        errorResponse.put("timestamp", System.currentTimeMillis());
-        errorResponse.put("status", "ERROR");
-        return errorResponse;
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
+        System.out.println("\n" + "=".repeat(50));
+        System.out.println("=== USER REGISTRATION ===");
+        System.out.println("Username: " + registerRequest.getUsername());
+        System.out.println("Email: " + registerRequest.getEmail());
+        
+        try {
+            // Check if username already exists
+            if (userService.existsByUsername(registerRequest.getUsername())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(createErrorResponse("Username already exists"));
+            }
+            
+            // Check if email already exists
+            if (userService.existsByEmail(registerRequest.getEmail())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(createErrorResponse("Email already exists"));
+            }
+            
+            // Create new user
+            User user = new User();
+            user.setUsername(registerRequest.getUsername());
+            user.setEmail(registerRequest.getEmail());
+            user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+            user.setRole(registerRequest.getRole() != null ? 
+                User.Role.valueOf(registerRequest.getRole()) : User.Role.USER);
+            
+            User savedUser = userService.save(user);
+            
+            // Generate token for auto-login
+            String token = jwtUtil.generateToken(savedUser.getUsername());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            response.put("username", savedUser.getUsername());
+            response.put("email", savedUser.getEmail());
+            response.put("role", savedUser.getRole().toString());
+            response.put("expiresIn", 86400000);
+            response.put("message", "Registration successful");
+            
+            System.out.println("✅ User registered successfully: " + savedUser.getUsername());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Registration error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(createErrorResponse("Registration failed: " + e.getMessage()));
+        } finally {
+            System.out.println("=".repeat(50) + "\n");
+        }
     }
 
-    // === DATA CHECK ENDPOINTS ===
-    
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // In a stateless JWT system, logout is handled client-side
+        // We could implement token blacklisting if needed
+        System.out.println("=== LOGOUT REQUEST ===");
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Logged out successfully");
+        response.put("status", "SUCCESS");
+        
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/check-database")
     public ResponseEntity<?> checkDatabase() {
         System.out.println("=== CHECKING DATABASE ===");
@@ -233,7 +264,31 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // === REQUEST CLASS ===
+    // ========== UTILITY METHODS ==========
+    
+    private ResponseEntity<?> createSuccessResponse(String username, String role, String email) {
+        String token = jwtUtil.generateToken(username);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("username", username);
+        response.put("role", role);
+        response.put("email", email);
+        response.put("expiresIn", 86400000);
+        
+        System.out.println("✅ Login successful for: " + username);
+        return ResponseEntity.ok(response);
+    }
+    
+    private Map<String, Object> createErrorResponse(String message) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("error", message);
+        errorResponse.put("timestamp", System.currentTimeMillis());
+        errorResponse.put("status", "ERROR");
+        return errorResponse;
+    }
+
+    // ========== REQUEST CLASSES ==========
     
     public static class LoginRequest {
         private String username;
@@ -243,5 +298,31 @@ public class AuthController {
         public void setUsername(String username) { this.username = username; }
         public String getPassword() { return password; }
         public void setPassword(String password) { this.password = password; }
+    }
+    
+    public static class RegisterRequest {
+        private String username;
+        private String email;
+        private String password;
+        private String role;
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        public String getPassword() { return password; }
+        public void setPassword(String password) { this.password = password; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+    }
+    
+    public static class ChangePasswordRequest {
+        private String oldPassword;
+        private String newPassword;
+
+        public String getOldPassword() { return oldPassword; }
+        public void setOldPassword(String oldPassword) { this.oldPassword = oldPassword; }
+        public String getNewPassword() { return newPassword; }
+        public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
     }
 }

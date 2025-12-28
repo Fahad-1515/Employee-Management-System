@@ -3,7 +3,9 @@ package com.ems.entity;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
-
+import java.util.ArrayList;
+import java.util.List;
+import com.ems.entity.LeaveRequest; 
 @Entity
 @Table(name = "employees")
 public class Employee {
@@ -44,11 +46,42 @@ public class Employee {
 
     @DecimalMin(value = "0.0", message = "Salary must be positive")
     private Double salary;
-
+    
     private LocalDateTime hireDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+private List<LeaveRequest> leaveRequests = new ArrayList<>();
 
+@Column(name = "vacation_days")
+private Integer vacationDays = 20;
+
+@Column(name = "sick_days")
+private Integer sickDays = 10;
+
+@Column(name = "personal_days")
+private Integer personalDays = 5;
+
+@Column(name = "used_vacation")
+private Integer usedVacation = 0;
+
+@Column(name = "used_sick")
+private Integer usedSick = 0;
+
+@Column(name = "used_personal")
+private Integer usedPersonal = 0;
+
+@Column(name = "profile_picture")
+private String profilePicture;
+
+@Column(name = "emergency_contact_name")
+private String emergencyContactName;
+
+@Column(name = "emergency_contact_relation")
+private String emergencyContactRelation;
+
+@Column(name = "emergency_contact_phone")
+private String emergencyContactPhone;
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -110,7 +143,93 @@ public class Employee {
 
     public Double getSalary() { return salary; }
     public void setSalary(Double salary) { this.salary = salary; }
+    public List<LeaveRequest> getLeaveRequests() { 
+    return leaveRequests; 
+}
 
+public void setLeaveRequests(List<LeaveRequest> leaveRequests) { 
+    this.leaveRequests = leaveRequests; 
+}
+
+public Integer getVacationDays() { 
+    return vacationDays != null ? vacationDays : 20; 
+}
+
+public void setVacationDays(Integer vacationDays) { 
+    this.vacationDays = vacationDays; 
+}
+
+public Integer getSickDays() { 
+    return sickDays != null ? sickDays : 10; 
+}
+
+public void setSickDays(Integer sickDays) { 
+    this.sickDays = sickDays; 
+}
+
+public Integer getPersonalDays() { 
+    return personalDays != null ? personalDays : 5; 
+}
+
+public void setPersonalDays(Integer personalDays) { 
+    this.personalDays = personalDays; 
+}
+
+public Integer getUsedVacation() { 
+    return usedVacation != null ? usedVacation : 0; 
+}
+
+public void setUsedVacation(Integer usedVacation) { 
+    this.usedVacation = usedVacation; 
+}
+
+public Integer getUsedSick() { 
+    return usedSick != null ? usedSick : 0; 
+}
+
+public void setUsedSick(Integer usedSick) { 
+    this.usedSick = usedSick; 
+}
+
+public Integer getUsedPersonal() { 
+    return usedPersonal != null ? usedPersonal : 0; 
+}
+
+public void setUsedPersonal(Integer usedPersonal) { 
+    this.usedPersonal = usedPersonal; 
+}
+
+public String getProfilePicture() { 
+    return profilePicture; 
+}
+
+public void setProfilePicture(String profilePicture) { 
+    this.profilePicture = profilePicture; 
+}
+
+public String getEmergencyContactName() { 
+    return emergencyContactName; 
+}
+
+public void setEmergencyContactName(String emergencyContactName) { 
+    this.emergencyContactName = emergencyContactName; 
+}
+
+public String getEmergencyContactRelation() { 
+    return emergencyContactRelation; 
+}
+
+public void setEmergencyContactRelation(String emergencyContactRelation) { 
+    this.emergencyContactRelation = emergencyContactRelation; 
+}
+
+public String getEmergencyContactPhone() { 
+    return emergencyContactPhone; 
+}
+
+public void setEmergencyContactPhone(String emergencyContactPhone) { 
+    this.emergencyContactPhone = emergencyContactPhone; 
+}
     public LocalDateTime getHireDate() { return hireDate; }
     public void setHireDate(LocalDateTime hireDate) { this.hireDate = hireDate; }
 

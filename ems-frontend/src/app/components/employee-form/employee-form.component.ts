@@ -1,10 +1,20 @@
-import { Component, Inject, OnInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
+import {
+  Component,
+  Inject,
+  OnInit,
+  ChangeDetectorRef,
+  OnDestroy,
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EmployeeService } from '../../services/employee.service';
 import { AuthService } from '../../services/auth.service';
-import { Employee, COUNTRY_CODES, formatPhoneNumber } from '../../models/employee.model';
+import {
+  Employee,
+  COUNTRY_CODES,
+  formatPhoneNumber,
+} from '../../models/employee.model';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -22,18 +32,34 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   countryCodes = COUNTRY_CODES;
   hidePhoneHint = false;
   employeeId?: number;
-  
+
   private subscriptions: Subscription[] = [];
 
   // Form field getters
-  get firstName() { return this.employeeForm.get('firstName'); }
-  get lastName() { return this.employeeForm.get('lastName'); }
-  get email() { return this.employeeForm.get('email'); }
-  get countryCode() { return this.employeeForm.get('countryCode'); }
-  get phoneNumber() { return this.employeeForm.get('phoneNumber'); }
-  get department() { return this.employeeForm.get('department'); }
-  get position() { return this.employeeForm.get('position'); }
-  get salary() { return this.employeeForm.get('salary'); }
+  get firstName() {
+    return this.employeeForm.get('firstName');
+  }
+  get lastName() {
+    return this.employeeForm.get('lastName');
+  }
+  get email() {
+    return this.employeeForm.get('email');
+  }
+  get countryCode() {
+    return this.employeeForm.get('countryCode');
+  }
+  get phoneNumber() {
+    return this.employeeForm.get('phoneNumber');
+  }
+  get department() {
+    return this.employeeForm.get('department');
+  }
+  get position() {
+    return this.employeeForm.get('position');
+  }
+  get salary() {
+    return this.employeeForm.get('salary');
+  }
 
   get title(): string {
     return this.isEdit ? 'Edit Employee' : 'Add New Employee';
@@ -54,37 +80,37 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   ) {
     console.log('🎯 EmployeeFormComponent initialized');
     console.log('Mode:', data ? 'Edit' : 'Create');
-    
+
     this.isEdit = !!data;
     this.employeeForm = this.createForm();
-    
-    // ✅ FIX: HARDCODE DATA IMMEDIATELY - NO API CALLS
+
+    // Hardcode department and position options
     this.departments = [
-      'Information Technology', 
-      'Human Resources', 
+      'Information Technology',
+      'Human Resources',
       'Finance',
-      'Marketing', 
-      'Sales', 
-      'Operations', 
-      'Support', 
-      'Engineering'
+      'Marketing',
+      'Sales',
+      'Operations',
+      'Support',
+      'Engineering',
     ];
-    
+
     this.positions = [
-      'Software Engineer', 
-      'HR Manager', 
+      'Software Engineer',
+      'HR Manager',
       'Financial Analyst',
-      'Marketing Specialist', 
-      'Sales Executive', 
+      'Marketing Specialist',
+      'Sales Executive',
       'Operations Manager',
-      'System Administrator', 
-      'Frontend Developer', 
-      'Backend Developer'
+      'System Administrator',
+      'Frontend Developer',
+      'Backend Developer',
     ];
-    
+
     console.log('📊 Departments loaded:', this.departments.length);
     console.log('📊 Positions loaded:', this.positions.length);
-    
+
     if (this.isEdit && data?.id) {
       this.employeeId = data.id;
     }
@@ -92,26 +118,26 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log('🎯 EmployeeFormComponent.ngOnInit()');
-    
+
     this.loadFormData();
-    
-    // ✅ FIX: DO NOT CALL loadFilters() - We're using hardcoded data
-    // this.loadFilters();
-    
+
     // Auto-update phone hint when fields change
-    this.subscriptions.push(
-      this.employeeForm.get('countryCode')?.valueChanges.subscribe(() => {
+    const countryCodeSub = this.employeeForm
+      .get('countryCode')
+      ?.valueChanges.subscribe(() => {
         this.updatePhoneHint();
-      }) || new Subscription()
-    );
-    
-    this.subscriptions.push(
-      this.employeeForm.get('phoneNumber')?.valueChanges.subscribe(() => {
+      });
+
+    const phoneNumberSub = this.employeeForm
+      .get('phoneNumber')
+      ?.valueChanges.subscribe(() => {
         this.updatePhoneHint();
-      }) || new Subscription()
-    );
-    
-    // ✅ FIX: Force UI update after a short delay
+      });
+
+    if (countryCodeSub) this.subscriptions.push(countryCodeSub);
+    if (phoneNumberSub) this.subscriptions.push(phoneNumberSub);
+
+    // Force UI update after a short delay
     setTimeout(() => {
       console.log('🔄 Forcing UI update...');
       console.log('Department dropdown options:', this.departments);
@@ -121,56 +147,73 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   createForm(): FormGroup {
     return this.fb.group({
-      firstName: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(50),
-        Validators.pattern(/^[a-zA-Z\s]*$/)
-      ]],
-      lastName: ['', [
-        Validators.required,
-        Validators.minLength(2),
-        Validators.maxLength(50),
-        Validators.pattern(/^[a-zA-Z\s]*$/)
-      ]],
-      email: ['', [
-        Validators.required,
-        Validators.email,
-        Validators.pattern(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/)
-      ]],
+      firstName: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+          Validators.pattern(/^[a-zA-Z\s]*$/),
+        ],
+      ],
+      lastName: [
+        '',
+        [
+          Validators.required,
+          Validators.minLength(2),
+          Validators.maxLength(50),
+          Validators.pattern(/^[a-zA-Z\s]*$/),
+        ],
+      ],
+      email: [
+        '',
+        [
+          Validators.required,
+          Validators.email,
+          Validators.pattern(
+            /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+          ),
+        ],
+      ],
       countryCode: ['+1', [Validators.required]],
-      phoneNumber: ['', [
-        Validators.required,
-        Validators.pattern(/^[0-9]{8,15}$/),
-        Validators.minLength(8),
-        Validators.maxLength(15)
-      ]],
+      phoneNumber: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^[0-9]{8,15}$/),
+          Validators.minLength(8),
+          Validators.maxLength(15),
+        ],
+      ],
       department: ['', [Validators.required]],
       position: ['', [Validators.required]],
-      salary: ['', [
-        Validators.required,
-        Validators.min(0),
-        Validators.max(1000000),
-        Validators.pattern(/^\d+(\.\d{1,2})?$/)
-      ]]
+      salary: [
+        '',
+        [
+          Validators.required,
+          Validators.min(0),
+          Validators.max(1000000),
+          Validators.pattern(/^\d+(\.\d{1,2})?$/),
+        ],
+      ],
     });
   }
 
   loadFormData(): void {
     if (this.isEdit && this.data) {
       console.log('📝 Loading edit data:', this.data);
-      
+
       let countryCode = '+1';
       let phoneNumber = this.data.phoneNumber || '';
-      
+
       // Extract country code from full phone number
       if (phoneNumber.startsWith('+')) {
-        const country = this.countryCodes.find(c => 
+        const country = this.countryCodes.find((c) =>
           phoneNumber.startsWith(c.code)
         );
         if (country) {
@@ -178,7 +221,7 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
           phoneNumber = phoneNumber.substring(country.code.length);
         }
       }
-      
+
       this.employeeForm.patchValue({
         firstName: this.data.firstName || '',
         lastName: this.data.lastName || '',
@@ -187,7 +230,7 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
         phoneNumber: phoneNumber,
         department: this.data.department || '',
         position: this.data.position || '',
-        salary: this.data.salary || 0
+        salary: this.data.salary || 0,
       });
     }
   }
@@ -197,14 +240,14 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
       console.log('❌ Form invalid!');
       console.log('Department value:', this.department?.value);
       console.log('Position value:', this.position?.value);
-      
+
       this.markAllFieldsAsTouched();
       this.showErrorMessage('Please fill all required fields correctly');
       return;
     }
 
     this.loading = true;
-    
+
     const formValue = this.employeeForm.value;
     const employeeData: Employee = {
       firstName: formValue.firstName.trim(),
@@ -214,14 +257,15 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
       countryCode: formValue.countryCode,
       department: formValue.department,
       position: formValue.position,
-      salary: parseFloat(formValue.salary)
+      salary: parseFloat(formValue.salary),
     };
 
     console.log('📤 Submitting employee data:', employeeData);
 
-    const operation = this.isEdit && this.employeeId
-      ? this.employeeService.updateEmployee(this.employeeId, employeeData)
-      : this.employeeService.createEmployee(employeeData);
+    const operation =
+      this.isEdit && this.employeeId
+        ? this.employeeService.updateEmployee(this.employeeId, employeeData)
+        : this.employeeService.createEmployee(employeeData);
 
     const sub = operation.subscribe({
       next: (response) => {
@@ -230,15 +274,13 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
           `Employee ${this.isEdit ? 'updated' : 'created'} successfully!`
         );
         this.dialogRef.close({ success: true, data: response });
+        this.loading = false;
       },
       error: (error) => {
         console.error('❌ Save operation failed:', error);
         this.handleSaveError(error);
         this.loading = false;
       },
-      complete: () => {
-        this.loading = false;
-      }
     });
 
     this.subscriptions.push(sub);
@@ -252,7 +294,7 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   getFullPhoneNumber(): string {
     const countryCode = this.countryCode?.value;
     const phoneNumber = this.phoneNumber?.value;
-    
+
     if (countryCode && phoneNumber) {
       return formatPhoneNumber(`${countryCode}${phoneNumber}`);
     }
@@ -265,13 +307,13 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
 
   getSelectedCountryName(): string {
     const countryCode = this.countryCode?.value;
-    const country = this.countryCodes.find(c => c.code === countryCode);
+    const country = this.countryCodes.find((c) => c.code === countryCode);
     return country ? `${country.flag} ${country.name}` : 'Select country';
   }
 
   // Helper Methods
   private markAllFieldsAsTouched(): void {
-    Object.values(this.employeeForm.controls).forEach(control => {
+    Object.values(this.employeeForm.controls).forEach((control) => {
       control.markAsTouched();
       control.updateValueAndValidity();
     });
@@ -280,20 +322,20 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
   private showSuccessMessage(message: string): void {
     this.snackBar.open(message, 'Close', {
       duration: 3000,
-      panelClass: ['success-snackbar']
+      panelClass: ['success-snackbar'],
     });
   }
 
   private showErrorMessage(message: string): void {
     this.snackBar.open(message, 'Close', {
       duration: 5000,
-      panelClass: ['error-snackbar']
+      panelClass: ['error-snackbar'],
     });
   }
 
   private handleSaveError(error: any): void {
     let errorMessage = 'Failed to save employee';
-    
+
     if (error.status === 400) {
       errorMessage = 'Validation error. Please check your input.';
     } else if (error.status === 409) {
@@ -306,7 +348,7 @@ export class EmployeeFormComponent implements OnInit, OnDestroy {
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
+
     this.showErrorMessage(errorMessage);
   }
 }

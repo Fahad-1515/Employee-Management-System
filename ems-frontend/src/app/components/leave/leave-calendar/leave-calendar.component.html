@@ -1,0 +1,100 @@
+<div class="leave-calendar-container">
+  <div class="calendar-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>calendar_today</mat-icon>
+        Leave Calendar
+      </h1>
+      <p>View and manage employee leave schedule</p>
+    </div>
+    <div class="header-actions">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="refreshCalendar()"
+        [disabled]="loading"
+      >
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-raised-button color="accent" routerLink="/leave/request">
+        <mat-icon>add</mat-icon>
+        Request Leave
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading calendar events...</p>
+  </div>
+
+  <!-- Calendar Container -->
+  <div *ngIf="!loading" class="calendar-wrapper">
+    <div class="calendar-legend">
+      <div class="legend-title">
+        <mat-icon>color_lens</mat-icon>
+        Leave Type Legend
+      </div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <span class="legend-color vacation"></span>
+          <span>Vacation</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color sick"></span>
+          <span>Sick Leave</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color personal"></span>
+          <span>Personal</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color maternity"></span>
+          <span>Maternity</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color paternity"></span>
+          <span>Paternity</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FullCalendar -->
+    <div class="fullcalendar-container">
+      <full-calendar [options]="calendarOptions"></full-calendar>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="quick-stats" *ngIf="!loading">
+    <mat-card class="stats-card">
+      <mat-card-content>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <mat-icon class="stat-icon vacation">beach_access</mat-icon>
+            <div class="stat-info">
+              <h3>Vacation</h3>
+              <p>Most common leave type</p>
+            </div>
+          </div>
+          <div class="stat-item">
+            <mat-icon class="stat-icon sick">medical_services</mat-icon>
+            <div class="stat-info">
+              <h3>Sick Leave</h3>
+              <p>Medical leaves</p>
+            </div>
+          </div>
+          <div class="stat-item">
+            <mat-icon class="stat-icon upcoming">event_available</mat-icon>
+            <div class="stat-info">
+              <h3>{{ leaveEvents.length }}</h3>
+              <p>Total Leaves This Month</p>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

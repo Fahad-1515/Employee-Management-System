@@ -1,4 +1,5 @@
 <div class="employee-list-container">
+  <!-- Header -->
   <div class="header-actions">
     <h2>
       <mat-icon>people</mat-icon>
@@ -10,8 +11,16 @@
     </button>
   </div>
 
-  <!-- Export Buttons Section -->
-  <div class="export-buttons" style="margin: 15px 0; display: flex; gap: 10px">
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    <button mat-raised-button color="accent" (click)="openImportDialog()">
+      <mat-icon>upload</mat-icon>
+      Import CSV/Excel
+    </button>
+    <button mat-raised-button color="primary" (click)="openExportDialog()">
+      <mat-icon>download</mat-icon>
+      Export Options
+    </button>
     <button mat-raised-button color="primary" (click)="exportToCSV()">
       <mat-icon>download</mat-icon>
       Export to CSV
@@ -20,6 +29,29 @@
       <mat-icon>download</mat-icon>
       Export to Excel
     </button>
+  </div>
+
+  <!-- Bulk Operations Toolbar -->
+  <div *ngIf="showBulkToolbar" class="bulk-toolbar">
+    <div class="bulk-info">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ selectedEmployees.size }} selected</span>
+    </div>
+
+    <div class="bulk-actions">
+      <button mat-raised-button color="accent" (click)="exportSelected()">
+        <mat-icon>download</mat-icon>
+        Export Selected
+      </button>
+      <button mat-raised-button color="warn" (click)="bulkDelete()">
+        <mat-icon>delete</mat-icon>
+        Delete Selected
+      </button>
+      <button mat-button (click)="clearSelection()">
+        <mat-icon>clear</mat-icon>
+        Clear
+      </button>
+    </div>
   </div>
 
   <!-- Search Section -->
@@ -45,7 +77,7 @@
           class="advanced-search-btn"
         >
           <mat-icon>filter_list</mat-icon>
-          Advanced Filters
+          {{ showAdvancedSearch ? "Hide Filters" : "Advanced Filters" }}
         </button>
 
         <button mat-stroked-button (click)="onClearFilters()" color="warn">
@@ -93,6 +125,7 @@
               [(ngModel)]="searchCriteria.minSalary"
               (keyup.enter)="onSearch()"
               placeholder="0"
+              min="0"
             />
           </mat-form-field>
 
@@ -103,7 +136,8 @@
               type="number"
               [(ngModel)]="searchCriteria.maxSalary"
               (keyup.enter)="onSearch()"
-              placeholder="100000"
+              placeholder="1000000"
+              min="0"
             />
           </mat-form-field>
         </div>
@@ -119,8 +153,33 @@
           mat-table
           [dataSource]="dataSource"
           matSort
-          class="mat-elevation-z2"
+          class="mat-elevation-z1"
         >
+          <!-- Select Column -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef style="width: 50px">
+              <mat-checkbox
+                (change)="selectAll()"
+                [checked]="
+                  selectedEmployees.size === dataSource.data.length &&
+                  dataSource.data.length > 0
+                "
+                [indeterminate]="
+                  selectedEmployees.size > 0 &&
+                  selectedEmployees.size < dataSource.data.length
+                "
+              >
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let employee" style="width: 50px">
+              <mat-checkbox
+                (change)="toggleSelection(employee.id!)"
+                [checked]="isSelected(employee.id!)"
+              >
+              </mat-checkbox>
+            </td>
+          </ng-container>
+
           <!-- ID Column -->
           <ng-container matColumnDef="id">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>ID</th>
@@ -173,35 +232,45 @@
           <ng-container matColumnDef="salary">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>Salary</th>
             <td mat-cell *matCellDef="let employee">
-              ${{ employee.salary | number }}
+              ${{ employee.salary | number : "1.0-0" }}
             </td>
           </ng-container>
 
           <!-- Actions Column -->
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <th mat-header-cell *matHeaderCellDef style="width: 100px">
+              Actions
+            </th>
             <td mat-cell *matCellDef="let employee">
-              <button
-                mat-icon-button
-                color="primary"
-                [matTooltip]="'Edit ' + employee.firstName"
-                (click)="openEmployeeForm(employee)"
-              >
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button
-                mat-icon-button
-                color="warn"
-                [matTooltip]="'Delete ' + employee.firstName"
-                (click)="deleteEmployee(employee)"
-              >
-                <mat-icon>delete</mat-icon>
-              </button>
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  [matTooltip]="'Edit ' + employee.firstName"
+                  (click)="openEmployeeForm(employee)"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  [matTooltip]="'Delete ' + employee.firstName"
+                  (click)="deleteEmployee(employee)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
             </td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+          <tr
+            mat-header-row
+            *matHeaderRowDef="getDisplayedColumnsWithSelect()"
+          ></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: getDisplayedColumnsWithSelect()"
+          ></tr>
         </table>
 
         <!-- Loading Spinner -->

@@ -14,7 +14,11 @@
     </div>
 
     <!-- Main Form Content -->
-    <form [formGroup]="employeeForm" class="employee-form" [class.form-loading]="loadingData">
+    <form
+      [formGroup]="employeeForm"
+      class="employee-form"
+      [class.form-loading]="loadingData"
+    >
       <div class="form-row">
         <mat-form-field appearance="outline" class="form-field">
           <mat-label>First Name</mat-label>
@@ -186,7 +190,9 @@
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="loading || loadingData">Cancel</button>
+    <button mat-button (click)="onCancel()" [disabled]="loading || loadingData">
+      Cancel
+    </button>
     <button
       mat-raised-button
       color="primary"
@@ -195,7 +201,11 @@
     >
       <mat-icon>{{ isEdit ? "save" : "add" }}</mat-icon>
       {{ loading ? "PLEASE WAIT..." : buttonText }}
-      <mat-spinner *ngIf="loadingData" diameter="20" class="button-spinner"></mat-spinner>
+      <mat-spinner
+        *ngIf="loadingData"
+        diameter="20"
+        class="button-spinner"
+      ></mat-spinner>
     </button>
   </mat-dialog-actions>
 </div>

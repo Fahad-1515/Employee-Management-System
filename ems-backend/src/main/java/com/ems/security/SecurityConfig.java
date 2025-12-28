@@ -16,10 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -31,7 +29,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         System.out.println("=== BUILDING SECURITY FILTER CHAIN ===");
-        System.out.println("✅ Making /departments and /positions endpoints PUBLIC");
         
         // Configure HTTP Security
         http
@@ -44,10 +41,13 @@ public class SecurityConfig {
             // 3. Use stateless sessions
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
-            // 4. Configure request authorization - CRITICAL FIX
+            // 4. Configure request authorization
             .authorizeHttpRequests(auth -> auth
                 
+                // Preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
+                // ========== PUBLIC ENDPOINTS ==========
                 
                 // Auth endpoints
                 .requestMatchers("/api/auth/**").permitAll()
@@ -61,15 +61,17 @@ public class SecurityConfig {
                 // Error endpoint
                 .requestMatchers("/error").permitAll()
                 
-                // ✅ CRITICAL FIX: Make dropdown endpoints PUBLIC
+                // Employee dropdown endpoints (public for frontend)
                 .requestMatchers(HttpMethod.GET, "/api/employees/departments").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/employees/positions").permitAll()
                 
-                // ✅ Make stats endpoint public for dashboard
+                // Employee stats endpoint (public for dashboard)
                 .requestMatchers(HttpMethod.GET, "/api/employees/stats/summary").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees/stats/salary").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/employees/stats/department").permitAll()
                 
-                // ✅ Allow GET /employees for initial loading (optional, can remove if you want it protected)
-                .requestMatchers(HttpMethod.GET, "/api/employees").permitAll()
+                // Export endpoints (public for now)
+                .requestMatchers(HttpMethod.GET, "/api/export/**").permitAll()
                 
                 // ========== PROTECTED ENDPOINTS (REQUIRE AUTH) ==========
                 
@@ -77,17 +79,19 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // Employee management endpoints (require auth)
-                .requestMatchers(HttpMethod.POST, "/api/employees/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/employees").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/employees/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/employees/**").authenticated()
-                .requestMatchers(HttpMethod.POST, "/api/employees/bulk").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/employees/bulk").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/employees/bulk/department").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/employees/import/csv").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/employees/bulk/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/employees/bulk/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/employees/bulk/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/employees/import/**").hasRole("ADMIN")
+                
+                // Leave management endpoints
                 .requestMatchers("/api/leave/**").authenticated()
                 
-                // Allow authenticated access to other employee endpoints
-                .requestMatchers("/api/employees/**").authenticated()
+                // Allow GET /employees for authenticated users
+                .requestMatchers(HttpMethod.GET, "/api/employees/**").authenticated()
                 
                 // ========== FALLBACK ==========
                 .anyRequest().authenticated()  // Protect everything else by default
@@ -100,14 +104,6 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         System.out.println("=== SECURITY CONFIGURATION COMPLETE ===");
-        System.out.println("Public endpoints:");
-        System.out.println("  • /api/auth/**");
-        System.out.println("  • /api/test/**");
-        System.out.println("  • GET /api/employees/departments ✅");
-        System.out.println("  • GET /api/employees/positions ✅");
-        System.out.println("  • GET /api/employees/stats/summary ✅");
-        System.out.println("  • GET /api/employees ✅");
-        
         return http.build();
     }
 
@@ -120,7 +116,6 @@ public class SecurityConfig {
         // Allow specific origins
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200",
-            "http://127.0.0.1:4200",
             "https://employee-management-system-six-silk.vercel.app",
             "https://employee-management-system-jxdj.onrender.com"
         ));
@@ -156,32 +151,14 @@ public class SecurityConfig {
         // Cache preflight response for 1 hour
         configuration.setMaxAge(3600L);
         
-        System.out.println("CORS Configuration:");
+        System.out.println("✅ CORS Configuration Created");
         System.out.println("- Allowed Origins: " + configuration.getAllowedOrigins());
         System.out.println("- Allow Credentials: " + configuration.getAllowCredentials());
-        System.out.println("- Allowed Methods: " + configuration.getAllowedMethods());
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         
         return source;
-    }
-
-    // Alternative: Use this for development with wildcard origins
-    @Bean
-    public CorsFilter corsFilter() {
-        System.out.println("=== CREATING CORS FILTER (DEVELOPMENT) ===");
-        
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*");  // Wildcard for development
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        
-        return new CorsFilter(source);
     }
 
     @Bean

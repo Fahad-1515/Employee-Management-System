@@ -1,0 +1,264 @@
+<div class="profile-container">
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading employee profile...</p>
+  </div>
+
+  <!-- Profile Content -->
+  <div *ngIf="!loading && employee" class="profile-content">
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-avatar-section">
+        <div class="avatar-container">
+          <img [src]="getProfileImage()" alt="Profile" class="profile-avatar" />
+          <div class="avatar-overlay" *ngIf="isAdmin">
+            <button mat-icon-button class="change-photo-btn">
+              <mat-icon>photo_camera</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div class="profile-title">
+          <h1>{{ employee.firstName }} {{ employee.lastName }}</h1>
+          <p class="employee-role">
+            <mat-icon>work</mat-icon>
+            {{ employee.position }} • {{ employee.department }}
+          </p>
+          <p class="employee-id">
+            <mat-icon>badge</mat-icon>
+            Employee ID: {{ employee.id }}
+          </p>
+        </div>
+      </div>
+
+      <div class="profile-actions" *ngIf="isAdmin">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="editProfile()"
+          *ngIf="!isEditing"
+        >
+          <mat-icon>edit</mat-icon>
+          Edit Profile
+        </button>
+        <div *ngIf="isEditing" class="edit-actions">
+          <button mat-button (click)="cancelEdit()">Cancel</button>
+          <button mat-raised-button color="primary" (click)="saveProfile()">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="profile-grid">
+      <!-- Left Column: Personal Information -->
+      <div class="left-column">
+        <!-- Personal Information Card -->
+        <mat-card class="info-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>person</mat-icon>
+              Personal Information
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>Full Name</label>
+                <p>{{ employee.firstName }} {{ employee.lastName }}</p>
+              </div>
+              <div class="info-item">
+                <label>Email Address</label>
+                <p>
+                  <a [href]="'mailto:' + employee.email" class="email-link">
+                    {{ employee.email }}
+                  </a>
+                </p>
+              </div>
+              <div class="info-item">
+                <label>Phone Number</label>
+                <p>{{ employee.phoneNumber }}</p>
+              </div>
+              <div class="info-item">
+                <label>Hire Date</label>
+                <p>{{ employee.hireDate | date : "longDate" }}</p>
+              </div>
+              <div class="info-item">
+                <label>Salary</label>
+                <p class="salary">${{ employee.salary | number }}</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Emergency Contact Card -->
+        <mat-card class="info-card" *ngIf="employee.emergencyContact">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>contact_emergency</mat-icon>
+              Emergency Contact
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="emergency-contact">
+              <div class="contact-item">
+                <mat-icon>person</mat-icon>
+                <div>
+                  <strong>{{ employee.emergencyContact.name }}</strong>
+                  <span>{{ employee.emergencyContact.relationship }}</span>
+                </div>
+              </div>
+              <div class="contact-item">
+                <mat-icon>phone</mat-icon>
+                <div>
+                  <strong>Phone</strong>
+                  <span>{{ employee.emergencyContact.phone }}</span>
+                </div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+
+      <!-- Right Column: Leave & Quick Actions -->
+      <div class="right-column">
+        <!-- Leave Balance Card -->
+        <mat-card class="leave-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>beach_access</mat-icon>
+              Leave Balance
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="leave-balance-grid" *ngIf="leaveBalance">
+              <!-- Vacation Leave -->
+              <div class="leave-type">
+                <div class="leave-header">
+                  <mat-icon class="leave-icon vacation">beach_access</mat-icon>
+                  <div class="leave-info">
+                    <h3>Vacation</h3>
+                    <span class="leave-stats">
+                      {{ leaveBalance.usedVacation }} /
+                      {{ leaveBalance.vacationDays }} days used
+                    </span>
+                  </div>
+                  <span class="leave-remaining">
+                    {{
+                      leaveBalance.vacationDays - leaveBalance.usedVacation
+                    }}
+                    days left
+                  </span>
+                </div>
+                <mat-progress-bar
+                  [value]="calculateLeavePercentage('vacation')"
+                  color="primary"
+                  mode="determinate"
+                >
+                </mat-progress-bar>
+              </div>
+
+              <!-- Sick Leave -->
+              <div class="leave-type">
+                <div class="leave-header">
+                  <mat-icon class="leave-icon sick">medical_services</mat-icon>
+                  <div class="leave-info">
+                    <h3>Sick Leave</h3>
+                    <span class="leave-stats">
+                      {{ leaveBalance.usedSick }} /
+                      {{ leaveBalance.sickDays }} days used
+                    </span>
+                  </div>
+                  <span class="leave-remaining">
+                    {{ leaveBalance.sickDays - leaveBalance.usedSick }} days
+                    left
+                  </span>
+                </div>
+                <mat-progress-bar
+                  [value]="calculateLeavePercentage('sick')"
+                  color="accent"
+                  mode="determinate"
+                >
+                </mat-progress-bar>
+              </div>
+
+              <!-- Personal Leave -->
+              <div class="leave-type">
+                <div class="leave-header">
+                  <mat-icon class="leave-icon personal"
+                    >self_improvement</mat-icon
+                  >
+                  <div class="leave-info">
+                    <h3>Personal Leave</h3>
+                    <span class="leave-stats">
+                      {{ leaveBalance.usedPersonal }} /
+                      {{ leaveBalance.personalDays }} days used
+                    </span>
+                  </div>
+                  <span class="leave-remaining">
+                    {{
+                      leaveBalance.personalDays - leaveBalance.usedPersonal
+                    }}
+                    days left
+                  </span>
+                </div>
+                <mat-progress-bar
+                  [value]="calculateLeavePercentage('personal')"
+                  color="warn"
+                  mode="determinate"
+                >
+                </mat-progress-bar>
+              </div>
+            </div>
+
+            <div class="leave-actions">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="openLeaveRequestDialog()"
+              >
+                <mat-icon>add</mat-icon>
+                Request Leave
+              </button>
+              <button mat-button>
+                <mat-icon>history</mat-icon>
+                View History
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Quick Actions Card -->
+        <mat-card class="quick-actions-card">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>flash_on</mat-icon>
+              Quick Actions
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="quick-actions-grid">
+              <button mat-button class="action-btn">
+                <mat-icon>description</mat-icon>
+                View Documents
+              </button>
+              <button mat-button class="action-btn">
+                <mat-icon>payments</mat-icon>
+                Salary Slips
+              </button>
+              <button mat-button class="action-btn">
+                <mat-icon>assessment</mat-icon>
+                Performance
+              </button>
+              <button mat-button class="action-btn">
+                <mat-icon>settings</mat-icon>
+                Settings
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,4 +1,3 @@
-<!-- src/app/components/analytics/analytics.component.html -->
 <div class="analytics-container">
   <!-- Header -->
   <div class="analytics-header">
@@ -25,6 +24,7 @@
         mat-raised-button
         color="accent"
         (click)="exportAnalyticsReport()"
+        [disabled]="loading"
       >
         <mat-icon>download</mat-icon>
         Export Report
@@ -106,7 +106,7 @@
             <canvas
               baseChart
               [data]="departmentChartData"
-              [type]="'pie'"
+              [type]="departmentChartType"
               [options]="chartOptions"
             >
             </canvas>
@@ -144,7 +144,7 @@
             <canvas
               baseChart
               [data]="salaryChartData"
-              [type]="'bar'"
+              [type]="salaryChartType"
               [options]="salaryChartOptions"
             >
             </canvas>
@@ -165,7 +165,7 @@
             <canvas
               baseChart
               [data]="positionChartData"
-              [type]="'bar'"
+              [type]="positionChartType"
               [options]="chartOptions"
             >
             </canvas>

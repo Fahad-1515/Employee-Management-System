@@ -1,8 +1,9 @@
-// src/app/components/dashboard/dashboard.component.ts
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog'; // Add this import
 import { AuthService } from '../../services/auth.service';
 import { EmployeeService } from '../../services/employee.service';
+import { ImportDialogComponent } from '../shared/import-dialog/import-dialog.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -55,6 +56,13 @@ export class DashboardComponent implements OnInit {
       route: '/employees',
       action: 'export',
     },
+    {
+      icon: 'upload',
+      title: 'Import Data',
+      description: 'Bulk upload from CSV/Excel',
+      color: 'accent',
+      action: 'import',
+    },
   ];
 
   recentActivities = [
@@ -87,7 +95,8 @@ export class DashboardComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private employeeService: EmployeeService,
-    private router: Router
+    private router: Router,
+    private dialog: MatDialog // Add dialog to constructor
   ) {}
 
   ngOnInit(): void {
@@ -128,6 +137,19 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  openImportDialog(): void {
+    const dialogRef = this.dialog.open(ImportDialogComponent, {
+      width: '850px',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.success) {
+        this.loadDashboardStats(); // Refresh dashboard stats
+      }
+    });
+  }
+
   navigateToEmployees(): void {
     this.router.navigate(['/employees']);
   }
@@ -149,6 +171,9 @@ export class DashboardComponent implements OnInit {
         break;
       case 'export':
         this.employeeService.exportToExcel().subscribe();
+        break;
+      case 'import':
+        this.openImportDialog();
         break;
     }
   }

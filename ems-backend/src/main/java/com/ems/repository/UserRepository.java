@@ -1,4 +1,3 @@
-// src/main/java/com/ems/repository/UserRepository.java
 package com.ems.repository;
 
 import com.ems.entity.User;

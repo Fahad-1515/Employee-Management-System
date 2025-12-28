@@ -1,0 +1,141 @@
+<div class="import-dialog-container">
+  <h2 mat-dialog-title>
+    <mat-icon>upload_file</mat-icon>
+    Import Employees
+  </h2>
+
+  <mat-dialog-content>
+    <!-- File Upload Section -->
+    <div class="upload-section">
+      <div
+        class="upload-area"
+        (click)="fileInput.click()"
+        [class.has-file]="selectedFile"
+      >
+        <input
+          #fileInput
+          type="file"
+          hidden
+          (change)="onFileSelected($event)"
+          accept=".csv,.xlsx"
+        />
+
+        <div *ngIf="!selectedFile" class="upload-placeholder">
+          <mat-icon class="upload-icon">cloud_upload</mat-icon>
+          <h3>Upload CSV or Excel File</h3>
+          <p>Click to browse or drag & drop your file</p>
+          <small>Supported formats: .csv, .xlsx (Max 10MB)</small>
+        </div>
+
+        <div *ngIf="selectedFile" class="file-info">
+          <mat-icon class="file-icon">description</mat-icon>
+          <div class="file-details">
+            <strong>{{ selectedFile?.name }}</strong>
+            <span
+              >{{
+                selectedFile ? (selectedFile.size / 1024).toFixed(2) : 0
+              }}
+              KB</span
+            >
+          </div>
+          <button mat-icon-button (click)="clearFile()" class="clear-btn">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview Section -->
+    <div *ngIf="previewData.length > 0" class="preview-section">
+      <div class="preview-header">
+        <h3>
+          <mat-icon>preview</mat-icon>
+          Data Preview ({{ previewData.length }} rows)
+        </h3>
+        <div class="validation-summary">
+          <span class="valid-count">
+            <mat-icon class="valid-icon">check_circle</mat-icon>
+            {{ validRows }} valid
+          </span>
+          <span class="invalid-count" *ngIf="invalidRows > 0">
+            <mat-icon class="invalid-icon">error</mat-icon>
+            {{ invalidRows }} invalid
+          </span>
+        </div>
+      </div>
+
+      <div class="preview-table-container">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Row</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of previewData"
+              [class.row-valid]="!row.errors"
+              [class.row-invalid]="row.errors"
+            >
+              <td class="row-number">{{ row.rowNumber }}</td>
+              <td>{{ row.firstname || "—" }}</td>
+              <td>{{ row.lastname || "—" }}</td>
+              <td>{{ row.email || "—" }}</td>
+              <td>
+                <span class="department-badge">{{
+                  row.department || "—"
+                }}</span>
+              </td>
+              <td>
+                <div class="status-cell">
+                  <span *ngIf="row.errors" class="error-message">
+                    <mat-icon>error_outline</mat-icon>
+                    {{ row.errors }}
+                  </span>
+                  <span *ngIf="!row.errors" class="success-message">
+                    <mat-icon>check_circle</mat-icon>
+                    Ready to import
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="preview-footer">
+        <p>
+          <mat-icon>info</mat-icon>
+          Only valid rows will be imported. Fix errors before proceeding.
+        </p>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="downloadTemplate()" [disabled]="loading">
+      <mat-icon>download</mat-icon>
+      Download Template
+    </button>
+
+    <button mat-button (click)="dialogRef.close()" [disabled]="loading">
+      Cancel
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="confirmImport()"
+      [disabled]="!selectedFile || validRows === 0 || loading"
+    >
+      <mat-icon *ngIf="!loading">upload</mat-icon>
+      <mat-spinner *ngIf="loading" diameter="20"></mat-spinner>
+      {{ loading ? "Importing..." : "Import " + validRows + " Employees" }}
+    </button>
+  </mat-dialog-actions>
+</div>
