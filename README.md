@@ -42,8 +42,6 @@ Built using **Java, Spring Boot, Hibernate, MySQL, Angular, JWT**, and a fully r
 
 - 🗄️ MySQL database integration
 
-- 📦 Demonstrates
-
 ## Angular consuming REST APIs
 
 - Spring Boot backend with layered architecture
