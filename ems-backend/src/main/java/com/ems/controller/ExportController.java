@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/export")
 @CrossOrigin(origins = {
     "http://localhost:4200",
-    "https://employee-management-system-wheat-chi.vercel.app",
+    "https://employee-management-system-7c5q.vercel.app",
     "https://employee-management-system-jxdj.onrender.com"
 })
 public class ExportController {
